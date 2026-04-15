@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { TRADES, OKINAWA_CITIES } from '@/lib/constants'
 
@@ -8,10 +7,10 @@ export default function NewRequestPage() {
   const router = useRouter()
   const [form, setForm] = useState({
     type: 'support',
+    trade: '鳶工',
+    area: '那覇市',
     title: '',
     description: '',
-    trade: '',
-    area: '',
     period_start: '',
     period_end: '',
     daily_rate: '',
@@ -22,145 +21,178 @@ export default function NewRequestPage() {
   const set = (key: string, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [key]: value }))
 
-  const handleSubmit = async () => {
-    // TODO: Supabase INSERT + ログイン確認
-    alert('投稿しました！（Supabase未接続のためダミー）')
-    router.push('/requests')
-  }
+  const isSupport = form.type === 'support'
 
   return (
-    <main className="min-h-screen bg-gray-50 pb-20">
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-lg mx-auto px-4 h-14 flex items-center gap-3">
-          <Link href="/requests" className="text-gray-400 text-xl">←</Link>
-          <span className="font-black text-gray-800 text-sm">募集を投稿する</span>
+    <main className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white border-b border-gray-100">
+        <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+          <button onClick={() => router.back()} className="text-gray-400 p-1">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <span className="font-black text-gray-900 text-base">リクエスト投稿</span>
+          <div className="w-8" />
         </div>
       </header>
 
-      <div className="max-w-lg mx-auto px-4 py-5 space-y-4">
-        {/* Type */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <label className="block text-xs font-black text-gray-500 mb-2">種別</label>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { value: 'support', label: '🦺 応援募集', desc: '職人・人手' },
-              { value: 'subcontract', label: '🏢 下請け募集', desc: '協力会社' },
-            ].map((t) => (
-              <button
-                key={t.value}
-                onClick={() => set('type', t.value)}
-                className={`p-3 rounded-xl border-2 text-left transition-all ${
-                  form.type === t.value
-                    ? 'border-orange-500 bg-orange-50'
-                    : 'border-gray-200 bg-white'
-                }`}
-              >
-                <div className="text-sm font-black">{t.label}</div>
-                <div className="text-xs text-gray-500">{t.desc}</div>
-              </button>
-            ))}
+      <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
+        {/* 種別 */}
+        <div>
+          <label className="block text-sm font-black text-gray-800 mb-3">リクエスト種別</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => set('type', 'support')}
+              className={`py-5 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${
+                isSupport
+                  ? 'bg-blue-600 border-blue-600 text-white'
+                  : 'bg-white border-gray-200 text-gray-500'
+              }`}
+            >
+              <span className="text-2xl">👥</span>
+              <span className="font-black text-sm">応援リクエスト</span>
+            </button>
+            <button
+              onClick={() => set('type', 'subcontract')}
+              className={`py-5 rounded-2xl border-2 flex flex-col items-center gap-2 transition-all ${
+                !isSupport
+                  ? 'bg-orange-500 border-orange-500 text-white'
+                  : 'bg-white border-gray-200 text-gray-500'
+              }`}
+            >
+              <span className="text-2xl">🏢</span>
+              <span className="font-black text-sm">下請けリクエスト</span>
+            </button>
           </div>
         </div>
 
-        {/* Title */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <label className="block text-xs font-black text-gray-500 mb-2">タイトル <span className="text-red-500">*</span></label>
+        {/* 職種 */}
+        <div>
+          <label className="block text-sm font-black text-gray-800 mb-2">職種</label>
+          <div className="relative">
+            <select
+              value={form.trade}
+              onChange={(e) => set('trade', e.target.value)}
+              className="w-full border border-gray-200 rounded-2xl px-4 py-4 text-sm text-gray-800 bg-white appearance-none focus:outline-none focus:border-blue-400 font-medium"
+            >
+              {TRADES.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+        </div>
+
+        {/* エリア */}
+        <div>
+          <label className="block text-sm font-black text-gray-800 mb-2">エリア</label>
+          <div className="relative">
+            <select
+              value={form.area}
+              onChange={(e) => set('area', e.target.value)}
+              className="w-full border border-gray-200 rounded-2xl px-4 py-4 text-sm text-gray-800 bg-white appearance-none focus:outline-none focus:border-blue-400 font-medium"
+            >
+              {OKINAWA_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+        </div>
+
+        {/* タイトル */}
+        <div>
+          <label className="block text-sm font-black text-gray-800 mb-2">タイトル</label>
           <input
             type="text"
             value={form.title}
             onChange={(e) => set('title', e.target.value)}
-            placeholder="例: 鉄筋工 応援 3名急募 那覇市"
-            className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-orange-400"
+            placeholder="例）那覇市マンション現場 鳶工募集"
+            className="w-full border border-gray-200 rounded-2xl px-4 py-4 text-sm text-gray-800 focus:outline-none focus:border-blue-400 placeholder-gray-300"
           />
         </div>
 
-        {/* Trade & Area */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-3">
-          <div>
-            <label className="block text-xs font-black text-gray-500 mb-2">職種 <span className="text-red-500">*</span></label>
-            <select
-              value={form.trade}
-              onChange={(e) => set('trade', e.target.value)}
-              className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-orange-400 bg-white"
-            >
-              <option value="">選択してください</option>
-              {TRADES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-black text-gray-500 mb-2">エリア <span className="text-red-500">*</span></label>
-            <select
-              value={form.area}
-              onChange={(e) => set('area', e.target.value)}
-              className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:border-orange-400 bg-white"
-            >
-              <option value="">選択してください</option>
-              {OKINAWA_CITIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-        </div>
-
-        {/* Period */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 space-y-3">
-          <div>
-            <label className="block text-xs font-black text-gray-500 mb-2">期間 <span className="text-red-500">*</span></label>
-            <div className="grid grid-cols-2 gap-2">
-              <input type="date" value={form.period_start} onChange={(e) => set('period_start', e.target.value)}
-                className="border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-orange-400" />
-              <input type="date" value={form.period_end} onChange={(e) => set('period_end', e.target.value)}
-                className="border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-orange-400" />
-            </div>
-          </div>
-          {form.type === 'support' && (
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-black text-gray-500 mb-2">日当（円）</label>
-                <input type="number" value={form.daily_rate} onChange={(e) => set('daily_rate', e.target.value)}
-                  placeholder="20000"
-                  className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-orange-400" />
-              </div>
-              <div>
-                <label className="block text-xs font-black text-gray-500 mb-2">人数</label>
-                <input type="number" value={form.headcount} onChange={(e) => set('headcount', e.target.value)}
-                  placeholder="2"
-                  className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:border-orange-400" />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Description */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <label className="block text-xs font-black text-gray-500 mb-2">詳細説明</label>
+        {/* 詳細 */}
+        <div>
+          <label className="block text-sm font-black text-gray-800 mb-2">詳細</label>
           <textarea
             value={form.description}
             onChange={(e) => set('description', e.target.value)}
-            placeholder="現場の詳細、集合場所、必要な道具、注意事項など"
-            className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:border-orange-400"
+            placeholder="工事内容、必要な資格・経験、持参物など"
+            className="w-full border border-gray-200 rounded-2xl px-4 py-4 text-sm text-gray-800 focus:outline-none focus:border-blue-400 resize-none placeholder-gray-300"
             rows={4}
           />
         </div>
 
-        {/* Urgent */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <label className="flex items-center gap-3 cursor-pointer">
+        {/* 期間 */}
+        <div>
+          <label className="block text-sm font-black text-gray-800 mb-2">期間</label>
+          <div className="grid grid-cols-2 gap-3">
             <input
-              type="checkbox"
-              checked={form.is_urgent}
-              onChange={(e) => set('is_urgent', e.target.checked)}
-              className="w-5 h-5 accent-orange-500"
+              type="date"
+              value={form.period_start}
+              onChange={(e) => set('period_start', e.target.value)}
+              className="border border-gray-200 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-blue-400"
             />
-            <div>
-              <div className="font-black text-sm text-gray-800">急募にする</div>
-              <div className="text-xs text-gray-500">一覧で「急募」バッジが表示されます</div>
-            </div>
-          </label>
+            <input
+              type="date"
+              value={form.period_end}
+              onChange={(e) => set('period_end', e.target.value)}
+              className="border border-gray-200 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-blue-400"
+            />
+          </div>
         </div>
 
+        {/* 応援の場合のみ: 日当・人数 */}
+        {isSupport && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-black text-gray-800 mb-2">日当（円）</label>
+              <input
+                type="number"
+                value={form.daily_rate}
+                onChange={(e) => set('daily_rate', e.target.value)}
+                placeholder="18000"
+                className="w-full border border-gray-200 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-blue-400"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-black text-gray-800 mb-2">募集人数</label>
+              <input
+                type="number"
+                value={form.headcount}
+                onChange={(e) => set('headcount', e.target.value)}
+                placeholder="2"
+                className="w-full border border-gray-200 rounded-2xl px-4 py-3.5 text-sm focus:outline-none focus:border-blue-400"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* 急募チェック */}
+        <label className="flex items-center gap-3 cursor-pointer">
+          <div
+            onClick={() => set('is_urgent', !form.is_urgent)}
+            className={`w-12 h-6 rounded-full transition-colors relative ${form.is_urgent ? 'bg-red-500' : 'bg-gray-200'}`}
+          >
+            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${form.is_urgent ? 'translate-x-7' : 'translate-x-1'}`} />
+          </div>
+          <div>
+            <p className="font-black text-sm text-gray-800">急募にする</p>
+            <p className="text-xs text-gray-400">一覧で「急募」バッジが表示されます</p>
+          </div>
+        </label>
+
+        {/* 投稿ボタン */}
         <button
-          onClick={handleSubmit}
-          disabled={!form.title || !form.trade || !form.area || !form.period_start || !form.period_end}
-          className="w-full bg-orange-500 text-white font-black text-sm py-4 rounded-2xl shadow-lg disabled:opacity-40"
+          onClick={() => {
+            alert('投稿しました！（Supabase未接続のためダミー）')
+            router.push('/requests')
+          }}
+          disabled={!form.title || !form.period_start || !form.period_end}
+          className={`w-full py-4 rounded-2xl font-black text-white text-base shadow-lg transition-all disabled:opacity-40 ${
+            isSupport ? 'bg-blue-600' : 'bg-orange-500'
+          }`}
         >
           投稿する
         </button>
