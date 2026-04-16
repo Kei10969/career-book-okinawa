@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { Request } from '@/types/database'
 import { REQUEST_TYPE_COLOR, REQUEST_TYPE_LABEL } from '@/lib/constants'
+import BottomNav from '@/components/BottomNav'
 
 type RequestWithUser = Request & {
   user: { display_name: string; company_name: string | null; type: string }
@@ -179,21 +180,7 @@ export default function RequestDetailPage() {
         )}
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-        <div className="max-w-lg mx-auto grid grid-cols-4 h-16">
-          {[
-            { href: '/', icon: '🏠', label: 'ホーム' },
-            { href: '/requests', icon: '📋', label: '募集' },
-            { href: '/notifications', icon: '🔔', label: '通知' },
-            { href: '/mypage', icon: '👤', label: 'マイページ' },
-          ].map((n) => (
-            <Link key={n.href} href={n.href} className="flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-orange-500">
-              <span className="text-xl">{n.icon}</span>
-              <span className="text-[10px] font-bold">{n.label}</span>
-            </Link>
-          ))}
-        </div>
-      </nav>
+      <BottomNav />
     </main>
   )
 }

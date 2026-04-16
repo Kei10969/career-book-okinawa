@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { Notification } from '@/types/database'
+import BottomNav from '@/components/BottomNav'
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -125,25 +126,7 @@ export default function NotificationsPage() {
         ))}
       </div>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
-        <div className="max-w-lg mx-auto grid grid-cols-4 h-16">
-          {[
-            { href: '/', icon: '🏠', label: 'ホーム' },
-            { href: '/requests', icon: '📋', label: '募集' },
-            { href: '/notifications', icon: '🔔', label: '通知' },
-            { href: '/mypage', icon: '👤', label: 'マイページ' },
-          ].map((nav) => (
-            <Link
-              key={nav.href}
-              href={nav.href}
-              className="flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-orange-500"
-            >
-              <span className="text-xl">{nav.icon}</span>
-              <span className="text-[10px] font-bold">{nav.label}</span>
-            </Link>
-          ))}
-        </div>
-      </nav>
+      <BottomNav />
     </main>
   )
 }
