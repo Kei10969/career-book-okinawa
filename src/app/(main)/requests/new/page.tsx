@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase'
 import { TRADES, OKINAWA_CITIES } from '@/lib/constants'
 
 export default function NewRequestPage() {
@@ -17,11 +18,44 @@ export default function NewRequestPage() {
     headcount: '',
     is_urgent: false,
   })
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   const set = (key: string, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [key]: value }))
 
   const isSupport = form.type === 'support'
+
+  const isValid = form.title.trim() && form.description.trim() && form.period_start && form.period_end
+
+  const handleSubmit = async () => {
+    if (!isValid || submitting) return
+    setSubmitting(true)
+    setSubmitError(null)
+
+    const supabase = createClient()
+    const { error } = await supabase.from('requests').insert({
+      user_id: 'dummy-user-id',
+      type: form.type as 'support' | 'subcontract',
+      trade: form.trade,
+      area: form.area,
+      title: form.title.trim(),
+      description: form.description.trim(),
+      period_start: form.period_start,
+      period_end: form.period_end,
+      daily_rate: form.daily_rate ? Number(form.daily_rate) : null,
+      headcount: form.headcount ? Number(form.headcount) : null,
+      is_urgent: form.is_urgent,
+      status: 'open',
+    })
+
+    if (error) {
+      setSubmitError('投稿に失敗しました。もう一度お試しください。')
+      setSubmitting(false)
+    } else {
+      router.push('/requests')
+    }
+  }
 
   return (
     <main className="min-h-screen bg-white">
@@ -102,7 +136,7 @@ export default function NewRequestPage() {
 
         {/* タイトル */}
         <div>
-          <label className="block text-sm font-black text-gray-800 mb-2">タイトル</label>
+          <label className="block text-sm font-black text-gray-800 mb-2">タイトル <span className="text-red-500">*</span></label>
           <input
             type="text"
             value={form.title}
@@ -114,7 +148,7 @@ export default function NewRequestPage() {
 
         {/* 詳細 */}
         <div>
-          <label className="block text-sm font-black text-gray-800 mb-2">詳細</label>
+          <label className="block text-sm font-black text-gray-800 mb-2">詳細 <span className="text-red-500">*</span></label>
           <textarea
             value={form.description}
             onChange={(e) => set('description', e.target.value)}
@@ -126,7 +160,7 @@ export default function NewRequestPage() {
 
         {/* 期間 */}
         <div>
-          <label className="block text-sm font-black text-gray-800 mb-2">期間</label>
+          <label className="block text-sm font-black text-gray-800 mb-2">期間 <span className="text-red-500">*</span></label>
           <div className="grid grid-cols-2 gap-3">
             <input
               type="date"
@@ -183,18 +217,22 @@ export default function NewRequestPage() {
           </div>
         </label>
 
+        {submitError && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-3 text-center">
+            <p className="text-sm text-red-600 font-bold">{submitError}</p>
+          </div>
+        )}
+
         {/* 投稿ボタン */}
         <button
-          onClick={() => {
-            alert('投稿しました！（Supabase未接続のためダミー）')
-            router.push('/requests')
-          }}
-          disabled={!form.title || !form.period_start || !form.period_end}
-          className={`w-full py-4 rounded-2xl font-black text-white text-base shadow-lg transition-all disabled:opacity-40 ${
+          onClick={handleSubmit}
+          disabled={!isValid || submitting}
+          className={`w-full py-4 rounded-2xl font-black text-white text-base shadow-lg transition-all disabled:opacity-40 flex items-center justify-center gap-2 ${
             isSupport ? 'bg-blue-600' : 'bg-orange-500'
           }`}
         >
-          投稿する
+          {submitting && <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+          {submitting ? '投稿中...' : '投稿する'}
         </button>
       </div>
     </main>

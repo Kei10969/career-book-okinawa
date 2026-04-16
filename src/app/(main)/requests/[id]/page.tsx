@@ -1,27 +1,91 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase'
+import { Request } from '@/types/database'
 import { REQUEST_TYPE_COLOR, REQUEST_TYPE_LABEL } from '@/lib/constants'
 
-// ダミーデータ
-const req = {
-  id: '1', type: 'support', title: '鉄筋工 応援 3名急募',
-  description: '那覇市内マンション工事現場。経験者優遇。朝8時集合、夕方5時終了予定。道具は各自持参お願いします。',
-  trade: '鉄筋工', area: '那覇市',
-  period_start: '2026-04-20', period_end: '2026-04-30',
-  daily_rate: 22000, headcount: 3, is_urgent: true, status: 'open',
-  user: { display_name: '匿名ユーザーA', type: 'company', company_name: '○○建設' },
-  _count: { applications: 2 },
+type RequestWithUser = Request & {
+  user: { display_name: string; company_name: string | null; type: string }
 }
 
 export default function RequestDetailPage() {
+  const { id } = useParams<{ id: string }>()
+  const [req, setReq] = useState<RequestWithUser | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState('')
+  const [applying, setApplying] = useState(false)
   const [applied, setApplied] = useState(false)
+  const [applyError, setApplyError] = useState<string | null>(null)
 
-  const handleApply = () => {
+  useEffect(() => {
+    const fetchRequest = async () => {
+      setLoading(true)
+      setError(null)
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('requests')
+        .select('*, user:users(display_name, company_name, type)')
+        .eq('id', id)
+        .single()
+
+      if (error || !data) {
+        setError('募集情報の取得に失敗しました')
+      } else {
+        setReq(data as unknown as RequestWithUser)
+      }
+      setLoading(false)
+    }
+    if (id) fetchRequest()
+  }, [id])
+
+  const handleApply = async () => {
     if (!message.trim()) return
-    // TODO: Supabase INSERT
-    setApplied(true)
+    setApplying(true)
+    setApplyError(null)
+    const supabase = createClient()
+    const { error } = await supabase
+      .from('applications')
+      .insert({
+        request_id: id,
+        applicant_id: 'dummy-user-id',
+        message: message.trim(),
+        status: 'pending',
+      })
+
+    if (error) {
+      setApplyError('応募に失敗しました。もう一度お試しください。')
+    } else {
+      setApplied(true)
+    }
+    setApplying(false)
+  }
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-gray-400 font-bold">読み込み中...</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (error || !req) {
+    return (
+      <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="text-center">
+          <span className="text-4xl">⚠️</span>
+          <p className="mt-3 text-sm text-red-600 font-bold">{error ?? '募集情報が見つかりません'}</p>
+          <Link href="/requests" className="mt-4 inline-block text-sm text-blue-600 font-bold underline">
+            一覧に戻る
+          </Link>
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -72,7 +136,7 @@ export default function RequestDetailPage() {
           )}
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">🏢 投稿者</span>
-            <span className="font-bold text-gray-800">{req.user.company_name ?? req.user.display_name}</span>
+            <span className="font-bold text-gray-800">{req.user?.company_name ?? req.user?.display_name ?? '匿名'}</span>
           </div>
         </div>
 
@@ -99,12 +163,16 @@ export default function RequestDetailPage() {
               className="w-full border border-gray-200 rounded-xl p-3 text-sm resize-none focus:outline-none focus:border-orange-400"
               rows={4}
             />
+            {applyError && (
+              <p className="text-xs text-red-500 mt-1">{applyError}</p>
+            )}
             <button
               onClick={handleApply}
-              disabled={!message.trim()}
-              className="w-full mt-3 bg-orange-500 text-white font-black text-sm py-3.5 rounded-xl disabled:opacity-40"
+              disabled={!message.trim() || applying}
+              className="w-full mt-3 bg-orange-500 text-white font-black text-sm py-3.5 rounded-xl disabled:opacity-40 flex items-center justify-center gap-2"
             >
-              応募する
+              {applying && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+              {applying ? '送信中...' : '応募する'}
             </button>
             <p className="text-center text-xs text-gray-400 mt-2">※ログインが必要です</p>
           </div>

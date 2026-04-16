@@ -1,58 +1,43 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase'
+import { Request } from '@/types/database'
 import { OKINAWA_CITIES } from '@/lib/constants'
 
-const DUMMY_REQUESTS = [
-  {
-    id: '1', type: 'support', title: '那覇市新築マンション現場 鳶工募集',
-    trade: '鳶工', area: '那覇市',
-    period_start: '4/18', period_end: '5/2',
-    daily_rate: 18000, headcount: 3, is_urgent: true,
-    user: { company_name: '(株)沖縄建設' },
-  },
-  {
-    id: '2', type: 'support', title: '浦添市商業施設 型枠工急募',
-    trade: '型枠工', area: '浦添市',
-    period_start: '4/16', period_end: '4/29',
-    daily_rate: 16000, headcount: 2, is_urgent: true,
-    user: { company_name: '南建設工業' },
-  },
-  {
-    id: '3', type: 'support', title: '沖縄市住宅新築 大工さん募集',
-    trade: '大工', area: '沖縄市',
-    period_start: '4/22', period_end: '5/15',
-    daily_rate: 17000, headcount: 2, is_urgent: false,
-    user: { company_name: '島建工務店' },
-  },
-  {
-    id: '4', type: 'subcontract', title: '豊見城市商業施設 内装工事',
-    trade: '内装工事', area: '豊見城市',
-    period_start: '4/30', period_end: '5/30',
-    daily_rate: null, headcount: null, is_urgent: true,
-    user: { company_name: '(株)沖縄総合建設' },
-  },
-  {
-    id: '5', type: 'subcontract', title: '那覇市再開発 左官工事一式',
-    trade: '左官', area: '那覇市',
-    period_start: '5/5', period_end: '6/14',
-    daily_rate: null, headcount: null, is_urgent: false,
-    user: { company_name: '大成沖縄(株)' },
-  },
-  {
-    id: '6', type: 'subcontract', title: '浦添市マンション 防水工事協力会社',
-    trade: '防水工', area: '浦添市',
-    period_start: '5/15', period_end: '6/4',
-    daily_rate: null, headcount: null, is_urgent: false,
-    user: { company_name: '琉球ハウジング' },
-  },
-]
+type RequestWithUser = Request & {
+  user: { display_name: string; company_name: string | null }
+}
 
 export default function RequestsPage() {
   const [typeFilter, setTypeFilter] = useState<'support' | 'subcontract'>('support')
   const [areaFilter, setAreaFilter] = useState('all')
+  const [requests, setRequests] = useState<RequestWithUser[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filtered = DUMMY_REQUESTS.filter((r) => {
+  useEffect(() => {
+    const fetchRequests = async () => {
+      setLoading(true)
+      setError(null)
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('requests')
+        .select('*, user:users(display_name, company_name)')
+        .eq('status', 'open')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        setError('データの取得に失敗しました')
+      } else {
+        setRequests((data as unknown as RequestWithUser[]) ?? [])
+      }
+      setLoading(false)
+    }
+    fetchRequests()
+  }, [])
+
+  const filtered = requests.filter((r) => {
     if (r.type !== typeFilter) return false
     if (areaFilter !== 'all' && r.area !== areaFilter) return false
     return true
@@ -133,9 +118,29 @@ export default function RequestsPage() {
         </div>
       </div>
 
-      {/* Cards */}
+      {/* Content */}
       <div className="max-w-lg mx-auto px-4 py-3 space-y-3">
-        {filtered.map((req) => (
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-gray-400 font-bold">読み込み中...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-center">
+            <p className="text-sm text-red-600 font-bold">{error}</p>
+          </div>
+        )}
+
+        {!loading && !error && filtered.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <span className="text-4xl">📭</span>
+            <p className="text-sm text-gray-400 font-bold">募集がありません</p>
+          </div>
+        )}
+
+        {!loading && !error && filtered.map((req) => (
           <Link
             key={req.id}
             href={`/requests/${req.id}`}
@@ -194,7 +199,9 @@ export default function RequestsPage() {
               ) : (
                 <span className="text-gray-400 text-sm">要相談</span>
               )}
-              <span className="text-xs text-gray-400">{req.user.company_name}</span>
+              <span className="text-xs text-gray-400">
+                {req.user?.company_name ?? req.user?.display_name ?? '匿名'}
+              </span>
             </div>
           </Link>
         ))}
@@ -211,7 +218,6 @@ export default function RequestsPage() {
           <Link href="/notifications" className="flex flex-col items-center justify-center gap-0.5 text-gray-400 relative">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
             <span className="text-[10px] font-bold">通知</span>
-            <span className="absolute top-2 right-6 w-4 h-4 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">2</span>
           </Link>
           <Link href="/mypage" className="flex flex-col items-center justify-center gap-0.5 text-gray-400">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>

@@ -1,13 +1,61 @@
 'use client'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-
-const DUMMY_NOTIFICATIONS = [
-  { id: '1', type: 'new_application', title: '新しい応募が届きました', message: '「鉄筋工 応援 3名急募」に応募がありました', link: '/requests/1', is_read: false, created_at: '2026-04-15T10:30:00Z' },
-  { id: '2', type: 'application_approved', title: '応募が承認されました', message: '「内装工事 下請け募集」の応募が承認されました', link: '/requests/2', is_read: true, created_at: '2026-04-14T15:00:00Z' },
-]
+import { createClient } from '@/lib/supabase'
+import { Notification } from '@/types/database'
 
 export default function NotificationsPage() {
-  const unread = DUMMY_NOTIFICATIONS.filter((n) => !n.is_read).length
+  const [notifications, setNotifications] = useState<Notification[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const fetchNotifications = async () => {
+    setLoading(true)
+    setError(null)
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', 'dummy-user-id')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      setError('通知の取得に失敗しました')
+    } else {
+      setNotifications((data as Notification[]) ?? [])
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchNotifications()
+  }, [])
+
+  const handleMarkAllRead = async () => {
+    const supabase = createClient()
+    await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('user_id', 'dummy-user-id')
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
+  }
+
+  const unread = notifications.filter((n) => !n.is_read).length
+
+  const notificationIcon = (type: Notification['type']) => {
+    switch (type) {
+      case 'new_application': return '📨'
+      case 'application_approved': return '✅'
+      case 'application_rejected': return '❌'
+      case 'new_request': return '🔔'
+      default: return '🔔'
+    }
+  }
+
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr)
+    return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
 
   return (
     <main className="min-h-screen bg-gray-50 pb-20">
@@ -15,13 +63,38 @@ export default function NotificationsPage() {
         <div className="max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
           <span className="font-black text-gray-800 text-sm">通知</span>
           {unread > 0 && (
-            <button className="text-xs text-orange-500 font-bold">すべて既読</button>
+            <button
+              onClick={handleMarkAllRead}
+              className="text-xs text-orange-500 font-bold"
+            >
+              すべて既読
+            </button>
           )}
         </div>
       </header>
 
       <div className="max-w-lg mx-auto px-4 py-4 space-y-2">
-        {DUMMY_NOTIFICATIONS.map((n) => (
+        {loading && (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-gray-400 font-bold">読み込み中...</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl p-4 text-center">
+            <p className="text-sm text-red-600 font-bold">{error}</p>
+          </div>
+        )}
+
+        {!loading && !error && notifications.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <span className="text-4xl">🔔</span>
+            <p className="text-sm text-gray-400 font-bold">通知はありません</p>
+          </div>
+        )}
+
+        {!loading && !error && notifications.map((n) => (
           <Link
             key={n.id}
             href={n.link ?? '#'}
@@ -32,17 +105,21 @@ export default function NotificationsPage() {
             }`}
           >
             <div className="flex items-start gap-3">
-              <span className="text-xl mt-0.5">
-                {n.type === 'new_application' ? '📨' : n.type === 'application_approved' ? '✅' : '🔔'}
-              </span>
+              <span className="text-xl mt-0.5">{notificationIcon(n.type)}</span>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <p className={`text-sm font-bold ${n.is_read ? 'text-gray-700' : 'text-gray-900'}`}>{n.title}</p>
-                  {!n.is_read && <span className="w-2 h-2 rounded-full bg-orange-500" />}
+                  <p className={`text-sm font-bold ${n.is_read ? 'text-gray-700' : 'text-gray-900'}`}>
+                    {n.title}
+                  </p>
+                  <span className="text-[10px] text-gray-400 ml-2 shrink-0">
+                    {formatDate(n.created_at)}
+                  </span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">{n.message}</p>
-                <p className="text-[11px] text-gray-400 mt-1">{new Date(n.created_at).toLocaleDateString('ja-JP')}</p>
+                <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{n.message}</p>
               </div>
+              {!n.is_read && (
+                <div className="w-2 h-2 bg-orange-500 rounded-full mt-1.5 shrink-0" />
+              )}
             </div>
           </Link>
         ))}
@@ -55,10 +132,14 @@ export default function NotificationsPage() {
             { href: '/requests', icon: '📋', label: '募集' },
             { href: '/notifications', icon: '🔔', label: '通知' },
             { href: '/mypage', icon: '👤', label: 'マイページ' },
-          ].map((n) => (
-            <Link key={n.href} href={n.href} className="flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-orange-500">
-              <span className="text-xl">{n.icon}</span>
-              <span className="text-[10px] font-bold">{n.label}</span>
+          ].map((nav) => (
+            <Link
+              key={nav.href}
+              href={nav.href}
+              className="flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-orange-500"
+            >
+              <span className="text-xl">{nav.icon}</span>
+              <span className="text-[10px] font-bold">{nav.label}</span>
             </Link>
           ))}
         </div>
