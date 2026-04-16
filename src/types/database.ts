@@ -38,13 +38,12 @@ export interface Request {
   trade: Trade
   period_start: string
   period_end: string
-  daily_rate: number | null       // 日当（応援リクエスト用）
-  headcount: number | null        // 募集人数
+  daily_rate: number | null
+  headcount: number | null
   is_urgent: boolean
   status: 'open' | 'closed'
   created_at: string
   updated_at: string
-  // relations
   user?: User
   applications?: Application[]
   _count?: { applications: number }
@@ -58,7 +57,6 @@ export interface Application {
   status: ApplicationStatus
   created_at: string
   updated_at: string
-  // relations
   request?: Request
   applicant?: User
 }
@@ -74,29 +72,108 @@ export interface Notification {
   created_at: string
 }
 
-export interface Database {
+export type Database = {
   public: {
     Tables: {
       users: {
         Row: User
-        Insert: Omit<User, 'created_at' | 'updated_at'>
-        Update: Partial<Omit<User, 'id' | 'created_at'>>
+        Insert: {
+          id?: string
+          line_id?: string | null
+          display_name: string
+          avatar_url?: string | null
+          type?: UserType
+          company_name?: string | null
+          skills?: string[]
+          areas?: string[]
+          bio?: string | null
+        }
+        Update: {
+          id?: string
+          line_id?: string | null
+          display_name?: string
+          avatar_url?: string | null
+          type?: UserType
+          company_name?: string | null
+          skills?: string[]
+          areas?: string[]
+          bio?: string | null
+        }
       }
       requests: {
         Row: Request
-        Insert: Omit<Request, 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Omit<Request, 'id' | 'created_at'>>
+        Insert: {
+          id?: string
+          user_id: string
+          type: RequestType
+          title: string
+          description: string
+          area: string
+          trade: string
+          period_start: string
+          period_end: string
+          daily_rate?: number | null
+          headcount?: number | null
+          is_urgent?: boolean
+          status?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: RequestType
+          title?: string
+          description?: string
+          area?: string
+          trade?: string
+          period_start?: string
+          period_end?: string
+          daily_rate?: number | null
+          headcount?: number | null
+          is_urgent?: boolean
+          status?: string
+        }
       }
       applications: {
         Row: Application
-        Insert: Omit<Application, 'id' | 'created_at' | 'updated_at'>
-        Update: Partial<Omit<Application, 'id' | 'created_at'>>
+        Insert: {
+          id?: string
+          request_id: string
+          applicant_id: string
+          message?: string
+          status?: ApplicationStatus
+        }
+        Update: {
+          id?: string
+          request_id?: string
+          applicant_id?: string
+          message?: string
+          status?: ApplicationStatus
+        }
       }
       notifications: {
         Row: Notification
-        Insert: Omit<Notification, 'id' | 'created_at'>
-        Update: Partial<Omit<Notification, 'id' | 'created_at'>>
+        Insert: {
+          id?: string
+          user_id: string
+          type: 'new_application' | 'application_approved' | 'application_rejected' | 'new_request'
+          title: string
+          message: string
+          link?: string | null
+          is_read?: boolean
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          type?: 'new_application' | 'application_approved' | 'application_rejected' | 'new_request'
+          title?: string
+          message?: string
+          link?: string | null
+          is_read?: boolean
+        }
       }
     }
+    Views: Record<string, never>
+    Functions: Record<string, never>
+    Enums: Record<string, never>
   }
 }
