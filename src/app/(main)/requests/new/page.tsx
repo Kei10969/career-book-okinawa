@@ -35,7 +35,7 @@ export default function NewRequestPage() {
 
     const supabase = createClient()
     const { error } = await supabase.from('requests').insert({
-      user_id: 'dummy-user-id',
+      user_id: '11111111-1111-1111-1111-111111111111',
       type: form.type as 'support' | 'subcontract',
       trade: form.trade,
       area: form.area,

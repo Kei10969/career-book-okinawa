@@ -17,7 +17,7 @@ export default function NotificationsPage() {
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
-      .eq('user_id', 'dummy-user-id')
+      .eq('user_id', '11111111-1111-1111-1111-111111111111')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -37,7 +37,7 @@ export default function NotificationsPage() {
     await supabase
       .from('notifications')
       .update({ is_read: true })
-      .eq('user_id', 'dummy-user-id')
+      .eq('user_id', '11111111-1111-1111-1111-111111111111')
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
   }
 

@@ -51,7 +51,7 @@ export default function RequestDetailPage() {
       .from('applications')
       .insert({
         request_id: id,
-        applicant_id: 'dummy-user-id',
+        applicant_id: '11111111-1111-1111-1111-111111111111',
         message: message.trim(),
         status: 'pending',
       })
