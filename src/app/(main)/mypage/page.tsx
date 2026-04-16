@@ -52,19 +52,16 @@ export default function MyPage() {
       .eq('user_id', MY_USER_ID)
       .order('created_at', { ascending: false })
 
-    // 自分の応募
-    const { data: appData } = await supabase
-      .from('applications')
-      .select('id, message, status, created_at, request_id')
-      .eq('applicant_id', MY_USER_ID)
-      .order('created_at', { ascending: false })
+    // 自分の応募（API route経由）
+    const appRes = await fetch(`/api/applications?applicant_id=${MY_USER_ID}`)
+    const appData = appRes.ok ? await appRes.json() : []
 
     const myReqs = (reqData as unknown as MyRequest[]) ?? []
     setMyRequests(myReqs)
 
     // 応募に紐づくrequest情報を取得
     const enrichedApps = await Promise.all(
-      ((appData as any[]) ?? []).map(async (app: any) => {
+      (appData as any[]).map(async (app: any) => {
         const { data: reqInfo } = await supabase
           .from('requests')
           .select('id, title, trade, area')
@@ -80,20 +77,14 @@ export default function MyPage() {
   const fetchRequestApplications = async (requestId: string) => {
     setSelectedRequestId(requestId)
     const supabase = createClient()
-    const { data, error } = await supabase
-      .from('applications')
-      .select('id, message, status, created_at, request_id, applicant_id')
-      .eq('request_id', requestId)
-      .order('created_at', { ascending: false })
 
-    if (error || !data) {
-      setRequestApplications([])
-      return
-    }
+    // API route経由でapplications取得
+    const res = await fetch(`/api/applications?request_id=${requestId}`)
+    const data = res.ok ? await res.json() : []
 
     // applicant情報を個別取得
     const enriched = await Promise.all(
-      data.map(async (app: any) => {
+      (data as any[]).map(async (app: any) => {
         const { data: applicant } = await supabase
           .from('users')
           .select('display_name, company_name, type')
@@ -112,11 +103,11 @@ export default function MyPage() {
 
   const handleUpdateStatus = async (applicationId: string, newStatus: 'approved' | 'rejected') => {
     setUpdating(applicationId)
-    const supabase = createClient()
-    await supabase
-      .from('applications')
-      .update({ status: newStatus })
-      .eq('id', applicationId)
+    await fetch('/api/applications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: applicationId, status: newStatus }),
+    })
     setRequestApplications((prev) =>
       prev.map((a) => (a.id === applicationId ? { ...a, status: newStatus } : a))
     )

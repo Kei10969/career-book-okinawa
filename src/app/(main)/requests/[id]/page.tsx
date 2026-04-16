@@ -46,17 +46,19 @@ export default function RequestDetailPage() {
     if (!message.trim()) return
     setApplying(true)
     setApplyError(null)
-    const supabase = createClient()
-    const { error } = await supabase
-      .from('applications')
-      .insert({
+
+    const res = await fetch('/api/applications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         request_id: id,
         applicant_id: '11111111-1111-1111-1111-111111111111',
         message: message.trim(),
         status: 'pending',
-      })
+      }),
+    })
 
-    if (error) {
+    if (!res.ok) {
       setApplyError('応募に失敗しました。もう一度お試しください。')
     } else {
       setApplied(true)
