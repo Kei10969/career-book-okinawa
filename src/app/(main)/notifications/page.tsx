@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { Notification } from '@/types/database'
 import BottomNav from '@/components/BottomNav'
+import { getCurrentUserId } from '@/lib/auth'
 
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([])
@@ -17,7 +18,7 @@ export default function NotificationsPage() {
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
-      .eq('user_id', '11111111-1111-1111-1111-111111111111')
+      .eq('user_id', getCurrentUserId())
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -37,7 +38,7 @@ export default function NotificationsPage() {
     await supabase
       .from('notifications')
       .update({ is_read: true })
-      .eq('user_id', '11111111-1111-1111-1111-111111111111')
+      .eq('user_id', getCurrentUserId())
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
   }
 

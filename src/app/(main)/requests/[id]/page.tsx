@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import { Request } from '@/types/database'
 import { REQUEST_TYPE_COLOR, REQUEST_TYPE_LABEL } from '@/lib/constants'
 import BottomNav from '@/components/BottomNav'
+import { getCurrentUserId } from '@/lib/auth'
 
 type RequestWithUser = Request & {
   user: { display_name: string; company_name: string | null; type: string }
@@ -52,7 +53,7 @@ export default function RequestDetailPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         request_id: id,
-        applicant_id: '11111111-1111-1111-1111-111111111111',
+        applicant_id: getCurrentUserId(),
         message: message.trim(),
         status: 'pending',
       }),

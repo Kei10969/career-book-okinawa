@@ -5,7 +5,8 @@ import { createClient } from '@/lib/supabase'
 import BottomNav from '@/components/BottomNav'
 
 // テスト用ユーザーID（LINEログイン実装後に差し替え）
-const MY_USER_ID = '11111111-1111-1111-1111-111111111111'
+import { getCurrentUserId } from '@/lib/auth'
+const MY_USER_ID = getCurrentUserId()
 
 type ApplicationWithDetails = {
   id: string

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { TRADES, OKINAWA_CITIES } from '@/lib/constants'
+import { getCurrentUserId } from '@/lib/auth'
 
 export default function NewRequestPage() {
   const router = useRouter()
@@ -35,7 +36,7 @@ export default function NewRequestPage() {
 
     const supabase = createClient()
     const { error } = await supabase.from('requests').insert({
-      user_id: '11111111-1111-1111-1111-111111111111',
+      user_id: getCurrentUserId(),
       type: form.type as 'support' | 'subcontract',
       trade: form.trade,
       area: form.area,
