@@ -6,7 +6,7 @@ export default function BottomNav() {
   const pathname = usePathname()
 
   const isActive = (href: string) => {
-    if (href === '/') return pathname === '/'
+    if (href === '/') return pathname === '/' || pathname.startsWith('/requests')
     return pathname.startsWith(href)
   }
 
@@ -17,22 +17,15 @@ export default function BottomNav() {
       <div className="max-w-lg mx-auto h-16 relative flex items-stretch">
 
         {/* ホーム */}
-        <Link href="/" className={`flex-1 flex flex-col items-center justify-center gap-0.5 ${color('/')}`}>
+        <Link href="/requests" className={`flex-1 flex flex-col items-center justify-center gap-0.5 ${color('/')}`}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
           </svg>
           <span className="text-[10px] font-bold">ホーム</span>
         </Link>
 
-        {/* 募集 */}
-        <Link href="/requests" className={`flex-1 flex flex-col items-center justify-center gap-0.5 ${color('/requests')}`}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="3" width="18" height="18" rx="2"/>
-            <line x1="3" y1="9" x2="21" y2="9"/>
-            <line x1="9" y1="21" x2="9" y2="9"/>
-          </svg>
-          <span className="text-[10px] font-bold">募集</span>
-        </Link>
+        {/* ＋投稿（中央スペース） */}
+        <div className="flex-1" />
 
         {/* 通知 */}
         <Link href="/notifications" className={`flex-1 flex flex-col items-center justify-center gap-0.5 ${color('/notifications')}`}>
