@@ -6,7 +6,7 @@ export default function BottomNav() {
   const pathname = usePathname()
 
   const isActive = (href: string) => {
-    if (href === '/') return pathname === '/' || pathname.startsWith('/requests')
+    if (href === '/requests') return pathname === '/' || pathname.startsWith('/requests')
     return pathname.startsWith(href)
   }
 
@@ -14,18 +14,25 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 shadow-lg">
-      <div className="max-w-lg mx-auto h-16 relative flex items-stretch">
+      <div className="max-w-lg mx-auto h-16 flex items-stretch">
 
         {/* ホーム */}
-        <Link href="/requests" className={`flex-1 flex flex-col items-center justify-center gap-0.5 ${color('/')}`}>
+        <Link href="/requests" className={`flex-1 flex flex-col items-center justify-center gap-0.5 ${color('/requests')}`}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
           </svg>
           <span className="text-[10px] font-bold">ホーム</span>
         </Link>
 
-        {/* ＋投稿（中央スペース） */}
-        <div className="flex-1" />
+        {/* ＋投稿 */}
+        <Link href="/requests/new" className="flex-1 flex flex-col items-center justify-center gap-0.5 text-gray-400">
+          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </div>
+        </Link>
 
         {/* 通知 */}
         <Link href="/notifications" className={`flex-1 flex flex-col items-center justify-center gap-0.5 ${color('/notifications')}`}>
@@ -43,17 +50,6 @@ export default function BottomNav() {
             <circle cx="12" cy="7" r="4"/>
           </svg>
           <span className="text-[10px] font-bold">マイページ</span>
-        </Link>
-
-        {/* 中央＋ボタン */}
-        <Link
-          href="/requests/new"
-          className="absolute left-1/2 -translate-x-1/2 -top-6 w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center shadow-xl border-4 border-white"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
         </Link>
 
       </div>
