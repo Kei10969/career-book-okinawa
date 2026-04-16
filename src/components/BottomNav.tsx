@@ -6,7 +6,7 @@ export default function BottomNav() {
   const pathname = usePathname()
 
   const isActive = (href: string) => {
-    if (href === '/') return pathname === '/' || pathname === '/requests'
+    if (href === '/') return pathname === '/'
     return pathname.startsWith(href)
   }
 
