@@ -50,7 +50,7 @@ export default function NewRequestPage() {
     })
 
     if (error) {
-      setSubmitError('投稿に失敗しました。もう一度お試しください。')
+      setSubmitError(`投稿に失敗しました: ${error.message}`)
       setSubmitting(false)
     } else {
       router.push('/requests')
