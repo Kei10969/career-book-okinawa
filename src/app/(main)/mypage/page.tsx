@@ -55,24 +55,59 @@ export default function MyPage() {
     // 自分の応募
     const { data: appData } = await supabase
       .from('applications')
-      .select('id, message, status, created_at, request:requests(id, title, trade, area), applicant:users(display_name, company_name, type)')
+      .select('id, message, status, created_at, request_id')
       .eq('applicant_id', MY_USER_ID)
       .order('created_at', { ascending: false })
 
-    setMyRequests((reqData as unknown as MyRequest[]) ?? [])
-    setApplications((appData as unknown as ApplicationWithDetails[]) ?? [])
+    const myReqs = (reqData as unknown as MyRequest[]) ?? []
+    setMyRequests(myReqs)
+
+    // 応募に紐づくrequest情報を取得
+    const enrichedApps = await Promise.all(
+      ((appData as any[]) ?? []).map(async (app: any) => {
+        const { data: reqInfo } = await supabase
+          .from('requests')
+          .select('id, title, trade, area')
+          .eq('id', app.request_id)
+          .single()
+        return { ...app, request: reqInfo, applicant: null }
+      })
+    )
+    setApplications(enrichedApps as ApplicationWithDetails[])
     setLoading(false)
   }
 
   const fetchRequestApplications = async (requestId: string) => {
+    setSelectedRequestId(requestId)
     const supabase = createClient()
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('applications')
-      .select('id, message, status, created_at, request:requests(id, title, trade, area), applicant:users(display_name, company_name, type)')
+      .select('id, message, status, created_at, request_id, applicant_id')
       .eq('request_id', requestId)
       .order('created_at', { ascending: false })
-    setRequestApplications((data as unknown as ApplicationWithDetails[]) ?? [])
-    setSelectedRequestId(requestId)
+
+    if (error || !data) {
+      setRequestApplications([])
+      return
+    }
+
+    // applicant情報を個別取得
+    const enriched = await Promise.all(
+      data.map(async (app: any) => {
+        const { data: applicant } = await supabase
+          .from('users')
+          .select('display_name, company_name, type')
+          .eq('id', app.applicant_id)
+          .single()
+        const req = myRequests.find((r) => r.id === app.request_id)
+        return {
+          ...app,
+          applicant: applicant ?? { display_name: '匿名', company_name: null, type: 'individual' },
+          request: req ? { id: req.id, title: req.title, trade: req.trade, area: req.area } : null,
+        }
+      })
+    )
+    setRequestApplications(enriched as ApplicationWithDetails[])
   }
 
   const handleUpdateStatus = async (applicationId: string, newStatus: 'approved' | 'rejected') => {
