@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase'
+
 import { Request } from '@/types/database'
 import { REQUEST_TYPE_COLOR, REQUEST_TYPE_LABEL } from '@/lib/constants'
 import BottomNav from '@/components/BottomNav'
@@ -26,17 +26,13 @@ export default function RequestDetailPage() {
     const fetchRequest = async () => {
       setLoading(true)
       setError(null)
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('requests')
-        .select('*, user:users(display_name, company_name, type)')
-        .eq('id', id)
-        .single()
-
-      if (error || !data) {
+      try {
+        const res = await fetch(`/api/requests/${id}`)
+        if (!res.ok) throw new Error('fetch failed')
+        const data = await res.json()
+        setReq(data as RequestWithUser)
+      } catch {
         setError('募集情報の取得に失敗しました')
-      } else {
-        setReq(data as unknown as RequestWithUser)
       }
       setLoading(false)
     }

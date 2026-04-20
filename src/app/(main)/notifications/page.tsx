@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase'
+
 import { Notification } from '@/types/database'
 import BottomNav from '@/components/BottomNav'
 import { getCurrentUserId } from '@/lib/auth'
@@ -14,17 +14,13 @@ export default function NotificationsPage() {
   const fetchNotifications = async () => {
     setLoading(true)
     setError(null)
-    const supabase = createClient()
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', getCurrentUserId())
-      .order('created_at', { ascending: false })
-
-    if (error) {
+    try {
+      const res = await fetch(`/api/notifications?user_id=${getCurrentUserId()}`)
+      if (!res.ok) throw new Error('fetch failed')
+      const data = await res.json()
+      setNotifications(data as Notification[])
+    } catch {
       setError('通知の取得に失敗しました')
-    } else {
-      setNotifications((data as Notification[]) ?? [])
     }
     setLoading(false)
   }
@@ -34,11 +30,11 @@ export default function NotificationsPage() {
   }, [])
 
   const handleMarkAllRead = async () => {
-    const supabase = createClient()
-    await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', getCurrentUserId())
+    await fetch('/api/notifications', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: getCurrentUserId() }),
+    })
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
   }
 

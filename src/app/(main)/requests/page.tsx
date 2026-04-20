@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase'
+
 import { Request } from '@/types/database'
 import { OKINAWA_CITIES } from '@/lib/constants'
 import BottomNav from '@/components/BottomNav'
@@ -21,17 +21,13 @@ export default function RequestsPage() {
     const fetchRequests = async () => {
       setLoading(true)
       setError(null)
-      const supabase = createClient()
-      const { data, error } = await supabase
-        .from('requests')
-        .select('*, user:users(display_name, company_name)')
-        .eq('status', 'open')
-        .order('created_at', { ascending: false })
-
-      if (error) {
+      try {
+        const res = await fetch('/api/requests')
+        if (!res.ok) throw new Error('fetch failed')
+        const data = await res.json()
+        setRequests(data as RequestWithUser[])
+      } catch {
         setError('データの取得に失敗しました')
-      } else {
-        setRequests((data as unknown as RequestWithUser[]) ?? [])
       }
       setLoading(false)
     }

@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
+
 import { TRADES, OKINAWA_CITIES } from '@/lib/constants'
 import { getCurrentUserId } from '@/lib/auth'
 
@@ -34,24 +34,28 @@ export default function NewRequestPage() {
     setSubmitting(true)
     setSubmitError(null)
 
-    const supabase = createClient()
-    const { error } = await supabase.from('requests').insert({
-      user_id: getCurrentUserId(),
-      type: form.type as 'support' | 'subcontract',
-      trade: form.trade,
-      area: form.area,
-      title: form.title.trim(),
-      description: form.description.trim(),
-      period_start: form.period_start,
-      period_end: form.period_end,
-      daily_rate: form.daily_rate ? Number(form.daily_rate) : null,
-      headcount: form.headcount ? Number(form.headcount) : null,
-      is_urgent: form.is_urgent,
-      status: 'open',
+    const res = await fetch('/api/requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: getCurrentUserId(),
+        type: form.type,
+        trade: form.trade,
+        area: form.area,
+        title: form.title.trim(),
+        description: form.description.trim(),
+        period_start: form.period_start,
+        period_end: form.period_end,
+        daily_rate: form.daily_rate ? Number(form.daily_rate) : null,
+        headcount: form.headcount ? Number(form.headcount) : null,
+        is_urgent: form.is_urgent,
+        status: 'open',
+      }),
     })
 
-    if (error) {
-      setSubmitError(`投稿に失敗しました: ${error.message}`)
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      setSubmitError(`投稿に失敗しました: ${err.error || '不明なエラー'}`)
       setSubmitting(false)
     } else {
       router.push('/requests')

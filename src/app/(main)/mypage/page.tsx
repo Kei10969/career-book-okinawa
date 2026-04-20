@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase'
+
 import BottomNav from '@/components/BottomNav'
 
 // テスト用ユーザーID（LINEログイン実装後に差し替え）
@@ -44,31 +44,24 @@ export default function MyPage() {
 
   const fetchData = async () => {
     setLoading(true)
-    const supabase = createClient()
 
-    // 自分の投稿
-    const { data: reqData } = await supabase
-      .from('requests')
-      .select('id, title, trade, area, status, type, is_urgent, created_at, applications(id, status)')
-      .eq('user_id', MY_USER_ID)
-      .order('created_at', { ascending: false })
+    // 自分の投稿（API route経由）
+    const reqRes = await fetch(`/api/requests?user_id=${MY_USER_ID}`)
+    const reqData = reqRes.ok ? await reqRes.json() : []
 
     // 自分の応募（API route経由）
     const appRes = await fetch(`/api/applications?applicant_id=${MY_USER_ID}`)
     const appData = appRes.ok ? await appRes.json() : []
 
-    const myReqs = (reqData as unknown as MyRequest[]) ?? []
+    const myReqs = (reqData as MyRequest[]) ?? []
     setMyRequests(myReqs)
 
     // 応募に紐づくrequest情報を取得
     const enrichedApps = await Promise.all(
       (appData as any[]).map(async (app: any) => {
-        const { data: reqInfo } = await supabase
-          .from('requests')
-          .select('id, title, trade, area')
-          .eq('id', app.request_id)
-          .single()
-        return { ...app, request: reqInfo, applicant: null }
+        const reqRes2 = await fetch(`/api/requests/${app.request_id}`)
+        const reqInfo = reqRes2.ok ? await reqRes2.json() : null
+        return { ...app, request: reqInfo ? { id: reqInfo.id, title: reqInfo.title, trade: reqInfo.trade, area: reqInfo.area } : null, applicant: null }
       })
     )
     setApplications(enrichedApps as ApplicationWithDetails[])
@@ -77,24 +70,20 @@ export default function MyPage() {
 
   const fetchRequestApplications = async (requestId: string) => {
     setSelectedRequestId(requestId)
-    const supabase = createClient()
 
     // API route経由でapplications取得
     const res = await fetch(`/api/applications?request_id=${requestId}`)
     const data = res.ok ? await res.json() : []
 
-    // applicant情報を個別取得
+    // applicant情報を個別取得（API Route経由）
     const enriched = await Promise.all(
       (data as any[]).map(async (app: any) => {
-        const { data: applicant } = await supabase
-          .from('users')
-          .select('display_name, company_name, type')
-          .eq('id', app.applicant_id)
-          .single()
+        const userRes = await fetch(`/api/users/${app.applicant_id}`)
+        const applicant = userRes.ok ? await userRes.json() : { display_name: '匿名', company_name: null, type: 'individual' }
         const req = myRequests.find((r) => r.id === app.request_id)
         return {
           ...app,
-          applicant: applicant ?? { display_name: '匿名', company_name: null, type: 'individual' },
+          applicant,
           request: req ? { id: req.id, title: req.title, trade: req.trade, area: req.area } : null,
         }
       })
