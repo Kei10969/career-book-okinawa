@@ -11,7 +11,6 @@ const notoSansJP = Noto_Sans_JP({
 export const metadata: Metadata = {
   title: '匿名キャリアブック沖縄 | 建設業マッチング',
   description: '沖縄の建設業界特化。応援・下請け募集をシンプルにつなぐマッチングサービス。',
-  themeColor: '#f97316',
 }
 
 export default function RootLayout({
@@ -21,6 +20,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ja">
+      <head>
+        <meta name="theme-color" content="#2563eb" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+      </head>
       <body className={notoSansJP.className}>{children}</body>
     </html>
   )

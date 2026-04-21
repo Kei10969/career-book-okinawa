@@ -10,8 +10,29 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params
   const { data, error } = await supabase
     .from('users')
-    .select('display_name, company_name, type')
+    .select('*')
     .eq('id', id)
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json(data)
+}
+
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const body = await req.json()
+
+  const allowedFields = ['nickname', 'display_name', 'avatar_url', 'role', 'company_name', 'bio', 'skills', 'areas']
+  const updates: Record<string, unknown> = {}
+  for (const key of allowedFields) {
+    if (key in body) updates[key] = body[key]
+  }
+
+  const { data, error } = await supabase
+    .from('users')
+    .update(updates)
+    .eq('id', id)
+    .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

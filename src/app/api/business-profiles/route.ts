@@ -11,25 +11,45 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'user_id required' }, { status: 400 })
 
   const { data, error } = await supabase
-    .from('notifications')
+    .from('business_profiles')
     .select('*')
     .eq('user_id', userId)
-    .order('created_at', { ascending: false })
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      return NextResponse.json(null) // not found
+    }
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+  return NextResponse.json(data)
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json()
+  const { data, error } = await supabase
+    .from('business_profiles')
+    .insert(body)
+    .select()
+    .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
 
 export async function PUT(req: NextRequest) {
-  const { user_id } = await req.json()
+  const body = await req.json()
+  const { user_id, ...updates } = body
+
   if (!user_id) return NextResponse.json({ error: 'user_id required' }, { status: 400 })
 
-  const { error } = await supabase
-    .from('notifications')
-    .update({ is_read: true })
+  const { data, error } = await supabase
+    .from('business_profiles')
+    .update(updates)
     .eq('user_id', user_id)
-    .eq('is_read', false)
+    .select()
+    .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  return NextResponse.json(data)
 }

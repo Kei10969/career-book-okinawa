@@ -24,6 +24,13 @@ export const REQUEST_TYPE_COLOR: Record<string, string> = {
 
 export const APPLICATION_STATUS_LABEL: Record<string, string> = {
   pending: '申請中',
-  approved: '承認済',
+  approved: '成立',
   rejected: '却下',
+}
+
+export const OFFER_STATUS_LABEL: Record<string, string> = {
+  open: '募集中',
+  reviewing: '審査中',
+  matched: '成立',
+  closed: '終了',
 }

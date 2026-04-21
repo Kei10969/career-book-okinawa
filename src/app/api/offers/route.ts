@@ -7,21 +7,14 @@ const supabase = createClient(
 )
 
 export async function GET(req: NextRequest) {
-  const type = req.nextUrl.searchParams.get('type')
-  const area = req.nextUrl.searchParams.get('area')
-  const trade = req.nextUrl.searchParams.get('trade')
-  const userId = req.nextUrl.searchParams.get('user_id')
+  const fromUserId = req.nextUrl.searchParams.get('from_user_id')
 
   let query = supabase
-    .from('requests')
-    .select('*, user:users(display_name, company_name, role, nickname)')
-    .eq('status', 'open')
+    .from('offers')
+    .select('*, user:users!from_user_id(display_name, nickname, avatar_url)')
     .order('created_at', { ascending: false })
 
-  if (type && type !== 'all') query = query.eq('type', type)
-  if (area && area !== 'all') query = query.eq('area', area)
-  if (trade && trade !== 'all') query = query.eq('trade', trade)
-  if (userId) query = query.eq('user_id', userId)
+  if (fromUserId) query = query.eq('from_user_id', fromUserId)
 
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -30,7 +23,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { data, error } = await supabase.from('requests').insert(body).select().single()
+  const { data, error } = await supabase.from('offers').insert(body).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }

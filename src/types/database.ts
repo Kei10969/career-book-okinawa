@@ -1,6 +1,15 @@
-export type UserType = 'individual' | 'company'
+export type UserRole = 'user' | 'business'
 export type RequestType = 'support' | 'subcontract'
 export type ApplicationStatus = 'pending' | 'approved' | 'rejected'
+export type OfferStatus = 'open' | 'reviewing' | 'matched' | 'closed'
+export type NotificationType =
+  | 'new_application'
+  | 'application_approved'
+  | 'application_rejected'
+  | 'new_request'
+  | 'new_offer'
+  | 'offer_response'
+  | 'match'
 
 export type Trade =
   | '鳶工' | '型枠工' | '鉄筋工' | '大工' | '左官' | '塗装工'
@@ -19,7 +28,8 @@ export interface User {
   line_id: string | null
   display_name: string
   avatar_url: string | null
-  type: UserType
+  role: UserRole
+  nickname: string | null
   company_name: string | null
   skills: Trade[]
   areas: OkinawaCity[]
@@ -34,8 +44,8 @@ export interface Request {
   type: RequestType
   title: string
   description: string
-  area: OkinawaCity
-  trade: Trade
+  area: string
+  trade: string
   period_start: string
   period_end: string
   daily_rate: number | null
@@ -61,14 +71,41 @@ export interface Application {
   applicant?: User
 }
 
+export interface Offer {
+  id: string
+  from_user_id: string
+  area: string
+  trade: string
+  condition: string | null
+  message: string
+  status: OfferStatus
+  created_at: string
+  updated_at: string
+  user?: User
+}
+
+export interface BusinessProfile {
+  id: string
+  user_id: string
+  company_name: string
+  contact_name: string | null
+  phone: string | null
+  area: string | null
+  description: string | null
+  logo_url: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Notification {
   id: string
   user_id: string
-  type: 'new_application' | 'application_approved' | 'application_rejected' | 'new_request'
+  type: NotificationType
   title: string
   message: string
   link: string | null
   is_read: boolean
+  related_id: string | null
   created_at: string
 }
 
@@ -82,7 +119,8 @@ export type Database = {
           line_id?: string | null
           display_name: string
           avatar_url?: string | null
-          type?: UserType
+          role?: UserRole
+          nickname?: string | null
           company_name?: string | null
           skills?: string[]
           areas?: string[]
@@ -93,7 +131,8 @@ export type Database = {
           line_id?: string | null
           display_name?: string
           avatar_url?: string | null
-          type?: UserType
+          role?: UserRole
+          nickname?: string | null
           company_name?: string | null
           skills?: string[]
           areas?: string[]
@@ -150,25 +189,71 @@ export type Database = {
           status?: ApplicationStatus
         }
       }
+      offers: {
+        Row: Offer
+        Insert: {
+          id?: string
+          from_user_id: string
+          area: string
+          trade: string
+          condition?: string | null
+          message: string
+          status?: OfferStatus
+        }
+        Update: {
+          id?: string
+          from_user_id?: string
+          area?: string
+          trade?: string
+          condition?: string | null
+          message?: string
+          status?: OfferStatus
+        }
+      }
+      business_profiles: {
+        Row: BusinessProfile
+        Insert: {
+          id?: string
+          user_id: string
+          company_name: string
+          contact_name?: string | null
+          phone?: string | null
+          area?: string | null
+          description?: string | null
+          logo_url?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          company_name?: string
+          contact_name?: string | null
+          phone?: string | null
+          area?: string | null
+          description?: string | null
+          logo_url?: string | null
+        }
+      }
       notifications: {
         Row: Notification
         Insert: {
           id?: string
           user_id: string
-          type: 'new_application' | 'application_approved' | 'application_rejected' | 'new_request'
+          type: NotificationType
           title: string
           message: string
           link?: string | null
           is_read?: boolean
+          related_id?: string | null
         }
         Update: {
           id?: string
           user_id?: string
-          type?: 'new_application' | 'application_approved' | 'application_rejected' | 'new_request'
+          type?: NotificationType
           title?: string
           message?: string
           link?: string | null
           is_read?: boolean
+          related_id?: string | null
         }
       }
     }

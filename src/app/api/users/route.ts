@@ -8,11 +8,13 @@ const supabase = createClient(
 
 // LINEログイン後にユーザーを取得または作成
 export async function POST(req: NextRequest) {
-  const { line_id, display_name, avatar_url } = await req.json()
+  const { line_id, display_name, avatar_url, role } = await req.json()
 
   if (!line_id || !display_name) {
     return NextResponse.json({ error: 'line_id and display_name required' }, { status: 400 })
   }
+
+  const userRole = role === 'business' ? 'business' : 'user'
 
   // 既存ユーザー検索
   const { data: existing } = await supabase
@@ -22,11 +24,16 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (existing) {
-    // アバター更新
-    if (avatar_url && existing.avatar_url !== avatar_url) {
-      await supabase.from('users').update({ avatar_url }).eq('id', existing.id)
+    // アバター・ロール更新
+    const updates: Record<string, string> = {}
+    if (avatar_url && existing.avatar_url !== avatar_url) updates.avatar_url = avatar_url
+    if (userRole !== existing.role) updates.role = userRole
+
+    if (Object.keys(updates).length > 0) {
+      await supabase.from('users').update(updates).eq('id', existing.id)
     }
-    return NextResponse.json(existing)
+
+    return NextResponse.json({ ...existing, ...updates })
   }
 
   // 新規作成
@@ -36,7 +43,8 @@ export async function POST(req: NextRequest) {
       line_id,
       display_name,
       avatar_url,
-      type: 'individual',
+      role: userRole,
+      nickname: display_name,
     })
     .select()
     .single()

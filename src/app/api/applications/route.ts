@@ -10,7 +10,9 @@ export async function GET(req: NextRequest) {
   const requestId = req.nextUrl.searchParams.get('request_id')
   const applicantId = req.nextUrl.searchParams.get('applicant_id')
 
-  let query = supabase.from('applications').select('*')
+  let query = supabase
+    .from('applications')
+    .select('*, applicant:users!applicant_id(display_name, nickname, avatar_url)')
 
   if (requestId) query = query.eq('request_id', requestId)
   if (applicantId) query = query.eq('applicant_id', applicantId)

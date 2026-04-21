@@ -1,4 +1,5 @@
-// テスト用フォールバックID（LINEログイン実装後に削除）
+import type { UserRole } from '@/types/database'
+
 const TEST_USER_ID = '11111111-1111-1111-1111-111111111111'
 
 export function getCurrentUserId(): string {
@@ -16,12 +17,25 @@ export function getCurrentUserAvatar(): string {
   return localStorage.getItem('user_avatar') ?? ''
 }
 
+export function getCurrentUserRole(): UserRole {
+  if (typeof window === 'undefined') return 'user'
+  return (localStorage.getItem('user_role') as UserRole) || 'user'
+}
+
+export function getSelectedRole(): UserRole {
+  if (typeof window === 'undefined') return 'user'
+  return (localStorage.getItem('selected_role') as UserRole) || 'user'
+}
+
+export function setSelectedRole(role: UserRole): void {
+  localStorage.setItem('selected_role', role)
+}
+
 export function isLoggedIn(): boolean {
-  return !!getCurrentUserId()
+  if (typeof window === 'undefined') return false
+  return !!localStorage.getItem('user_id')
 }
 
 export function logout(): void {
-  localStorage.removeItem('user_id')
-  localStorage.removeItem('user_name')
-  localStorage.removeItem('user_avatar')
+  localStorage.clear()
 }
