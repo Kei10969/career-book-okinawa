@@ -1,12 +1,13 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { initLiff, getLiffProfile, liff } from '@/lib/liff'
+import { initLiff, liff } from '@/lib/liff'
 import type { UserRole } from '@/types/database'
 
 export default function LoginPage() {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     checkExistingLogin()
@@ -15,37 +16,35 @@ export default function LoginPage() {
   async function checkExistingLogin() {
     try {
       await initLiff()
+
       if (liff.isLoggedIn()) {
-        const profile = await getLiffProfile()
-        if (profile) {
-          const userId = localStorage.getItem('user_id')
-          const role = localStorage.getItem('user_role') as UserRole
-          if (userId && role) {
-            window.location.href = role === 'business' ? '/b/home' : '/u/home'
-            return
-          }
+        // 既にローカルにuser情報があればそのままリダイレクト
+        const userId = localStorage.getItem('user_id')
+        const role = localStorage.getItem('user_role') as UserRole
+
+        if (userId && role) {
+          window.location.href = role === 'business' ? '/b/home' : '/u/home'
+          return
         }
+
+        // LINEログイン済みだがuser未登録 → selected_roleがあればそのまま登録
+        const savedRole = localStorage.getItem('selected_role') as UserRole
+        if (savedRole) {
+          await registerUser(savedRole)
+          return
+        }
+
+        // roleも未選択 → ログイン画面で役割選択させる（ただしLINE認証済み表示）
       }
-    } catch {
-      // LIFF init failed, show login
+    } catch (e: any) {
+      console.error('Auth check failed:', e)
     }
     setIsCheckingAuth(false)
   }
 
-  async function handleLogin() {
-    if (!selectedRole) return
-    setIsLoading(true)
-    localStorage.setItem('selected_role', selectedRole)
-
+  async function registerUser(role: UserRole) {
     try {
-      await initLiff()
-      if (!liff.isLoggedIn()) {
-        liff.login()
-        return
-      }
-
       const profile = await liff.getProfile()
-
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -53,28 +52,58 @@ export default function LoginPage() {
           line_id: profile.userId,
           display_name: profile.displayName,
           avatar_url: profile.pictureUrl || null,
-          role: selectedRole,
+          role,
         }),
       })
 
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || `HTTP ${res.status}`)
+      }
+
       const user = await res.json()
       localStorage.setItem('user_id', user.id)
-      localStorage.setItem('user_name', user.display_name)
+      localStorage.setItem('user_name', user.display_name || user.nickname)
       localStorage.setItem('user_avatar', user.avatar_url || '')
       localStorage.setItem('user_role', user.role)
       localStorage.setItem('user_nickname', user.nickname || user.display_name)
+      localStorage.removeItem('selected_role')
 
       window.location.href = user.role === 'business' ? '/b/home' : '/u/home'
-    } catch {
+    } catch (e: any) {
+      setError(e.message || 'ユーザー登録に失敗しました')
       setIsLoading(false)
-      alert('ログインに失敗しました。もう一度お試しください。')
+      setIsCheckingAuth(false)
+    }
+  }
+
+  async function handleLogin() {
+    if (!selectedRole) return
+    setIsLoading(true)
+    setError('')
+    localStorage.setItem('selected_role', selectedRole)
+
+    try {
+      await initLiff()
+
+      if (liff.isLoggedIn()) {
+        // 既にLINEログイン済み → 直接ユーザー登録
+        await registerUser(selectedRole)
+      } else {
+        // LINEログインへ → 戻ってきたらcheckExistingLoginで登録される
+        liff.login({ redirectUri: window.location.origin + '/' })
+      }
+    } catch (e: any) {
+      setError(e.message || 'ログインに失敗しました')
+      setIsLoading(false)
     }
   }
 
   if (isCheckingAuth) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 gap-3">
         <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+        <p className="text-sm text-gray-400 font-bold">認証中...</p>
       </div>
     )
   }
@@ -107,6 +136,13 @@ export default function LoginPage() {
         <p className="text-white/80 text-sm text-center mb-8 leading-relaxed">
           沖縄の建設現場をつなぐ<br />マッチングサービス
         </p>
+
+        {/* エラー表示 */}
+        {error && (
+          <div className="w-full max-w-sm bg-red-500/20 border border-red-400/40 rounded-2xl p-3 mb-4">
+            <p className="text-red-200 text-xs text-center font-bold">{error}</p>
+          </div>
+        )}
 
         {/* 役割選択 */}
         <div className="w-full max-w-sm space-y-3 mb-6">
