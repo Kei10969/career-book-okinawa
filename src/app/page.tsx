@@ -114,10 +114,8 @@ export default function LoginPage() {
         // 既にLINEログイン済み → 直接登録
         await registerUser(selectedRole)
       } else {
-        // LINEログインへ
-        // redirectUriはエンドポイントURLと一致させる必要がある
-        // roleはlocalStorageに保存済みなのでそこから取得する
-        liff.login({ redirectUri: window.location.origin + '/' })
+        // LINEログインへ（redirectUriを指定しない = LIFFエンドポイントURLに自動で戻る）
+        liff.login()
       }
     } catch (e: any) {
       setError(e.message || 'ログインに失敗しました')
