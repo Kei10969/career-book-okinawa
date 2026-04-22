@@ -16,35 +16,38 @@ export default function LoginPage() {
 
   async function checkExistingLogin() {
     try {
+      // URLパラメータからroleを取得（LINEログイン後のリダイレクトで使う）
+      const params = new URLSearchParams(window.location.search)
+      const roleFromUrl = params.get('role') as UserRole | null
+
       setDebugInfo('LIFF初期化中...')
       await initLiff()
-      setDebugInfo('LIFF初期化完了')
+      setDebugInfo(`LIFF初期化完了 | isLoggedIn: ${liff.isLoggedIn()}`)
 
       if (liff.isLoggedIn()) {
-        setDebugInfo('LINEログイン済み検出')
-
         // 既にローカルにuser情報があればそのままリダイレクト
         const userId = localStorage.getItem('user_id')
-        const role = localStorage.getItem('user_role') as UserRole
+        const userRole = localStorage.getItem('user_role') as UserRole
 
-        if (userId && role) {
-          setDebugInfo(`既存ユーザー: ${role} → リダイレクト`)
-          window.location.href = role === 'business' ? '/b/home' : '/u/home'
+        if (userId && userRole) {
+          setDebugInfo(`既存ユーザー → ${userRole}`)
+          window.location.href = userRole === 'business' ? '/b/home' : '/u/home'
           return
         }
 
-        // LINEログイン済みだがuser未登録 → selected_roleがあればそのまま登録
-        const savedRole = localStorage.getItem('selected_role') as UserRole
-        if (savedRole) {
-          setDebugInfo(`保存済みロール: ${savedRole} → ユーザー登録中...`)
-          await registerUser(savedRole)
+        // roleの特定: URL > localStorage > null
+        const role = roleFromUrl || localStorage.getItem('selected_role') as UserRole | null
+        
+        if (role) {
+          setDebugInfo(`ロール: ${role} → ユーザー登録中...`)
+          await registerUser(role)
           return
         }
 
-        // roleも未選択 → 画面で選ばせる
-        setDebugInfo('ロール未選択 → 選択画面表示')
+        // LINEログイン済みだがrole不明 → 選択画面を出すが、次はliff.login不要
+        setDebugInfo('ログイン済み・ロール未選択')
       } else {
-        setDebugInfo('未ログイン → 選択画面表示')
+        setDebugInfo('未ログイン')
       }
     } catch (e: any) {
       console.error('Auth check failed:', e)
@@ -58,7 +61,7 @@ export default function LoginPage() {
     try {
       setDebugInfo('プロフィール取得中...')
       const profile = await liff.getProfile()
-      setDebugInfo(`プロフィール取得成功: ${profile.displayName}`)
+      setDebugInfo(`プロフィール: ${profile.displayName}`)
 
       const res = await fetch('/api/users', {
         method: 'POST',
@@ -73,7 +76,7 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const errText = await res.text()
-        throw new Error(`API Error ${res.status}: ${errText}`)
+        throw new Error(`API ${res.status}: ${errText}`)
       }
 
       const user = await res.json()
@@ -84,7 +87,7 @@ export default function LoginPage() {
       localStorage.setItem('user_nickname', user.nickname || user.display_name)
       localStorage.removeItem('selected_role')
 
-      setDebugInfo(`登録成功: ${user.role} → リダイレクト`)
+      setDebugInfo(`登録完了 → ${user.role}`)
       window.location.href = user.role === 'business' ? '/b/home' : '/u/home'
     } catch (e: any) {
       setError(e.message || 'ユーザー登録に失敗しました')
@@ -98,21 +101,23 @@ export default function LoginPage() {
     if (!selectedRole) return
     setIsLoading(true)
     setError('')
+
+    // localStorageにもURLにもroleを保存
     localStorage.setItem('selected_role', selectedRole)
 
     try {
       await initLiff()
 
       if (liff.isLoggedIn()) {
-        setDebugInfo('既にログイン済み → 直接登録')
+        // 既にLINEログイン済み → 直接登録
         await registerUser(selectedRole)
       } else {
-        setDebugInfo('LINEログインへリダイレクト...')
-        liff.login({ redirectUri: window.location.origin + '/' })
+        // LINEログインへ → redirectUriにroleをクエリパラメータで含める
+        const redirectUri = `${window.location.origin}/?role=${selectedRole}`
+        liff.login({ redirectUri })
       }
     } catch (e: any) {
       setError(e.message || 'ログインに失敗しました')
-      setDebugInfo(`ログインエラー: ${e.message}`)
       setIsLoading(false)
     }
   }
@@ -129,7 +134,6 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen relative overflow-hidden">
-      {/* 背景 */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
@@ -138,14 +142,11 @@ export default function LoginPage() {
       />
       <div className="absolute inset-0 bg-black/55" />
 
-      {/* コンテンツ */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 py-12">
-        {/* アイコン */}
         <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-2xl mb-6">
           <span className="text-4xl">🔧</span>
         </div>
 
-        {/* タイトル */}
         <h1 className="text-white text-3xl font-black mb-2 tracking-tight text-center">
           匿名キャリアブック
         </h1>
@@ -156,25 +157,21 @@ export default function LoginPage() {
           沖縄の建設現場をつなぐ<br />マッチングサービス
         </p>
 
-        {/* エラー表示 */}
         {error && (
           <div className="w-full max-w-sm bg-red-500/20 border border-red-400/40 rounded-2xl p-3 mb-4">
             <p className="text-red-200 text-xs text-center font-bold">{error}</p>
           </div>
         )}
 
-        {/* デバッグ情報（開発中のみ表示） */}
         {debugInfo && (
           <div className="w-full max-w-sm bg-white/10 border border-white/20 rounded-xl p-2 mb-4">
             <p className="text-white/60 text-[10px] text-center font-mono">{debugInfo}</p>
           </div>
         )}
 
-        {/* 役割選択 */}
         <div className="w-full max-w-sm space-y-3 mb-6">
           <p className="text-white/90 text-center text-sm font-bold mb-2">あなたの立場を選んでください</p>
 
-          {/* ユーザーカード */}
           <button
             onClick={() => setSelectedRole('user')}
             className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${
@@ -195,7 +192,6 @@ export default function LoginPage() {
             </div>
           </button>
 
-          {/* 業者カード */}
           <button
             onClick={() => setSelectedRole('business')}
             className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${
@@ -217,7 +213,6 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {/* LINEログインボタン */}
         <button
           onClick={handleLogin}
           disabled={!selectedRole || isLoading}
