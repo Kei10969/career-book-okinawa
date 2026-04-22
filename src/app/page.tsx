@@ -16,9 +16,10 @@ export default function LoginPage() {
 
   async function checkExistingLogin() {
     try {
-      // URLパラメータからroleを取得（LINEログイン後のリダイレクトで使う）
+      // roleの取得元: URL > Cookie > localStorage
       const params = new URLSearchParams(window.location.search)
       const roleFromUrl = params.get('role') as UserRole | null
+      const roleFromCookie = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('selected_role='))?.split('=')[1] as UserRole | null
 
       setDebugInfo('LIFF初期化中...')
       await initLiff()
@@ -35,8 +36,8 @@ export default function LoginPage() {
           return
         }
 
-        // roleの特定: URL > localStorage > null
-        const role = roleFromUrl || localStorage.getItem('selected_role') as UserRole | null
+        // roleの特定: URL > Cookie > localStorage > null
+        const role = roleFromUrl || roleFromCookie || localStorage.getItem('selected_role') as UserRole | null
         
         if (role) {
           setDebugInfo(`ロール: ${role} → ユーザー登録中...`)
@@ -102,8 +103,9 @@ export default function LoginPage() {
     setIsLoading(true)
     setError('')
 
-    // localStorageにもURLにもroleを保存
+    // localStorageとCookieの両方にroleを保存（リダイレクト後の確実な取得のため）
     localStorage.setItem('selected_role', selectedRole)
+    document.cookie = `selected_role=${selectedRole};path=/;max-age=300;SameSite=Lax`
 
     try {
       await initLiff()
@@ -112,9 +114,10 @@ export default function LoginPage() {
         // 既にLINEログイン済み → 直接登録
         await registerUser(selectedRole)
       } else {
-        // LINEログインへ → redirectUriにroleをクエリパラメータで含める
-        const redirectUri = `${window.location.origin}/?role=${selectedRole}`
-        liff.login({ redirectUri })
+        // LINEログインへ
+        // redirectUriはエンドポイントURLと一致させる必要がある
+        // roleはlocalStorageに保存済みなのでそこから取得する
+        liff.login({ redirectUri: window.location.origin + '/' })
       }
     } catch (e: any) {
       setError(e.message || 'ログインに失敗しました')
