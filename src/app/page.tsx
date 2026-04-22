@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { initLiff, liff } from '@/lib/liff'
+import { initLiff, liff, isLiffLoggedIn } from '@/lib/liff'
 import type { UserRole } from '@/types/database'
 
 export default function LoginPage() {
@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [error, setError] = useState('')
   const [debugInfo, setDebugInfo] = useState('')
+  const [liffReady, setLiffReady] = useState(false)
 
   useEffect(() => {
     checkExistingLogin()
@@ -16,51 +17,57 @@ export default function LoginPage() {
 
   async function checkExistingLogin() {
     try {
-      // roleの取得元: URL > Cookie > localStorage
-      const params = new URLSearchParams(window.location.search)
-      const roleFromUrl = params.get('role') as UserRole | null
-      const roleFromCookie = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('selected_role='))?.split('=')[1] as UserRole | null
+      setDebugInfo('初期化中...')
+      const ok = await initLiff()
+      setLiffReady(ok)
 
-      setDebugInfo('LIFF初期化中...')
-      await initLiff()
-      setDebugInfo(`LIFF初期化完了 | isLoggedIn: ${liff.isLoggedIn()}`)
+      if (!ok) {
+        setDebugInfo('LIFF初期化失敗 → 手動ログイン')
+        setIsCheckingAuth(false)
+        return
+      }
 
-      if (liff.isLoggedIn()) {
-        // 既にローカルにuser情報があればそのままリダイレクト
+      const loggedIn = isLiffLoggedIn()
+      setDebugInfo(`LIFF OK | ログイン: ${loggedIn}`)
+
+      if (loggedIn) {
+        // 既にローカルにuser情報があればリダイレクト
         const userId = localStorage.getItem('user_id')
         const userRole = localStorage.getItem('user_role') as UserRole
 
         if (userId && userRole) {
-          setDebugInfo(`既存ユーザー → ${userRole}`)
           window.location.href = userRole === 'business' ? '/b/home' : '/u/home'
           return
         }
 
-        // roleの特定: URL > Cookie > localStorage > null
-        const role = roleFromUrl || roleFromCookie || localStorage.getItem('selected_role') as UserRole | null
-        
+        // role取得: Cookie > localStorage
+        const roleFromCookie = getCookie('selected_role') as UserRole | null
+        const role = roleFromCookie || localStorage.getItem('selected_role') as UserRole | null
+
         if (role) {
-          setDebugInfo(`ロール: ${role} → ユーザー登録中...`)
+          setDebugInfo(`ロール: ${role} → 登録中...`)
           await registerUser(role)
           return
         }
 
-        // LINEログイン済みだがrole不明 → 選択画面を出すが、次はliff.login不要
         setDebugInfo('ログイン済み・ロール未選択')
       } else {
         setDebugInfo('未ログイン')
       }
     } catch (e: any) {
-      console.error('Auth check failed:', e)
+      console.error('Auth check:', e)
       setDebugInfo(`エラー: ${e.message}`)
-      setError(e.message || '認証チェックに失敗しました')
     }
     setIsCheckingAuth(false)
   }
 
+  function getCookie(name: string): string | null {
+    const match = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith(name + '='))
+    return match ? match.split('=')[1] : null
+  }
+
   async function registerUser(role: UserRole) {
     try {
-      setDebugInfo('プロフィール取得中...')
       const profile = await liff.getProfile()
       setDebugInfo(`プロフィール: ${profile.displayName}`)
 
@@ -87,8 +94,8 @@ export default function LoginPage() {
       localStorage.setItem('user_role', user.role)
       localStorage.setItem('user_nickname', user.nickname || user.display_name)
       localStorage.removeItem('selected_role')
+      document.cookie = 'selected_role=;path=/;max-age=0'
 
-      setDebugInfo(`登録完了 → ${user.role}`)
       window.location.href = user.role === 'business' ? '/b/home' : '/u/home'
     } catch (e: any) {
       setError(e.message || 'ユーザー登録に失敗しました')
@@ -103,22 +110,27 @@ export default function LoginPage() {
     setIsLoading(true)
     setError('')
 
-    // localStorageとCookieの両方にroleを保存（リダイレクト後の確実な取得のため）
     localStorage.setItem('selected_role', selectedRole)
     document.cookie = `selected_role=${selectedRole};path=/;max-age=300;SameSite=Lax`
 
-    try {
-      await initLiff()
+    if (liffReady && isLiffLoggedIn()) {
+      // 既にLINEログイン済み
+      await registerUser(selectedRole)
+      return
+    }
 
-      if (liff.isLoggedIn()) {
-        // 既にLINEログイン済み → 直接登録
-        await registerUser(selectedRole)
-      } else {
-        // LINEログインへ（redirectUriを指定しない = LIFFエンドポイントURLに自動で戻る）
-        liff.login()
-      }
-    } catch (e: any) {
-      setError(e.message || 'ログインに失敗しました')
+    if (liffReady) {
+      // LIFF経由でLINEログイン
+      liff.login()
+      return
+    }
+
+    // LIFFが使えない場合のフォールバック: LIFF URLで直接開く
+    const liffId = process.env.NEXT_PUBLIC_LIFF_ID
+    if (liffId) {
+      window.location.href = `https://liff.line.me/${liffId}`
+    } else {
+      setError('LIFF IDが設定されていません')
       setIsLoading(false)
     }
   }
@@ -135,12 +147,8 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen relative overflow-hidden">
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80')`,
-        }}
-      />
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: `url('https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&q=80')` }} />
       <div className="absolute inset-0 bg-black/55" />
 
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 py-12">
@@ -148,15 +156,9 @@ export default function LoginPage() {
           <span className="text-4xl">🔧</span>
         </div>
 
-        <h1 className="text-white text-3xl font-black mb-2 tracking-tight text-center">
-          匿名キャリアブック
-        </h1>
-        <div className="bg-orange-500 text-white text-sm font-black px-5 py-1 rounded-full mb-3 tracking-widest">
-          沖　縄
-        </div>
-        <p className="text-white/80 text-sm text-center mb-8 leading-relaxed">
-          沖縄の建設現場をつなぐ<br />マッチングサービス
-        </p>
+        <h1 className="text-white text-3xl font-black mb-2 tracking-tight text-center">匿名キャリアブック</h1>
+        <div className="bg-orange-500 text-white text-sm font-black px-5 py-1 rounded-full mb-3 tracking-widest">沖　縄</div>
+        <p className="text-white/80 text-sm text-center mb-8 leading-relaxed">沖縄の建設現場をつなぐ<br />マッチングサービス</p>
 
         {error && (
           <div className="w-full max-w-sm bg-red-500/20 border border-red-400/40 rounded-2xl p-3 mb-4">
@@ -173,54 +175,39 @@ export default function LoginPage() {
         <div className="w-full max-w-sm space-y-3 mb-6">
           <p className="text-white/90 text-center text-sm font-bold mb-2">あなたの立場を選んでください</p>
 
-          <button
-            onClick={() => setSelectedRole('user')}
+          <button onClick={() => setSelectedRole('user')}
             className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${
-              selectedRole === 'user'
-                ? 'border-blue-400 bg-blue-600/30 shadow-lg shadow-blue-500/20'
-                : 'border-white/20 bg-white/10'
-            }`}
-          >
+              selectedRole === 'user' ? 'border-blue-400 bg-blue-600/30 shadow-lg shadow-blue-500/20' : 'border-white/20 bg-white/10'
+            }`}>
             <div className="flex items-center gap-3">
               <span className="text-3xl">🔧</span>
               <div>
                 <p className="text-white font-black text-base">仕事を探す</p>
                 <p className="text-white/60 text-xs">職人・作業員として応募</p>
               </div>
-              {selectedRole === 'user' && (
-                <span className="ml-auto text-blue-400 text-xl">✓</span>
-              )}
+              {selectedRole === 'user' && <span className="ml-auto text-blue-400 text-xl">✓</span>}
             </div>
           </button>
 
-          <button
-            onClick={() => setSelectedRole('business')}
+          <button onClick={() => setSelectedRole('business')}
             className={`w-full p-4 rounded-2xl border-2 transition-all text-left ${
-              selectedRole === 'business'
-                ? 'border-orange-400 bg-orange-500/30 shadow-lg shadow-orange-500/20'
-                : 'border-white/20 bg-white/10'
-            }`}
-          >
+              selectedRole === 'business' ? 'border-orange-400 bg-orange-500/30 shadow-lg shadow-orange-500/20' : 'border-white/20 bg-white/10'
+            }`}>
             <div className="flex items-center gap-3">
               <span className="text-3xl">🏢</span>
               <div>
                 <p className="text-white font-black text-base">人材を募集する</p>
                 <p className="text-white/60 text-xs">事業者として募集を投稿</p>
               </div>
-              {selectedRole === 'business' && (
-                <span className="ml-auto text-orange-400 text-xl">✓</span>
-              )}
+              {selectedRole === 'business' && <span className="ml-auto text-orange-400 text-xl">✓</span>}
             </div>
           </button>
         </div>
 
-        <button
-          onClick={handleLogin}
-          disabled={!selectedRole || isLoading}
+        <button onClick={handleLogin} disabled={!selectedRole || isLoading}
           className={`w-full max-w-sm bg-[#06C755] text-white font-black text-lg py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl transition-all ${
             !selectedRole ? 'opacity-40 cursor-not-allowed' : 'active:scale-[0.98]'
-          }`}
-        >
+          }`}>
           {isLoading ? (
             <div className="animate-spin w-6 h-6 border-3 border-white border-t-transparent rounded-full" />
           ) : (
@@ -233,9 +220,7 @@ export default function LoginPage() {
           )}
         </button>
 
-        <p className="text-white/50 text-xs text-center mt-3">
-          LINEアカウントで簡単ログイン
-        </p>
+        <p className="text-white/50 text-xs text-center mt-3">LINEアカウントで簡単ログイン</p>
       </div>
     </main>
   )
