@@ -1,11 +1,25 @@
 import liff from '@line/liff'
 
 let initialized = false
+let initError: string | null = null
 
 export async function initLiff(): Promise<void> {
   if (initialized) return
-  await liff.init({ liffId: process.env.NEXT_PUBLIC_LIFF_ID! })
-  initialized = true
+  if (initError) throw new Error(initError)
+
+  const liffId = process.env.NEXT_PUBLIC_LIFF_ID
+  if (!liffId) {
+    initError = 'LIFF ID が設定されていません'
+    throw new Error(initError)
+  }
+
+  try {
+    await liff.init({ liffId })
+    initialized = true
+  } catch (e: any) {
+    initError = `LIFF初期化エラー: ${e.message || e}`
+    throw new Error(initError)
+  }
 }
 
 export async function getLiffProfile() {
@@ -14,16 +28,17 @@ export async function getLiffProfile() {
   return await liff.getProfile()
 }
 
-export async function loginWithLine(): Promise<void> {
-  await initLiff()
-  if (!liff.isLoggedIn()) {
-    liff.login()
-  }
+export function isLiffLoggedIn(): boolean {
+  return initialized && liff.isLoggedIn()
 }
 
 export function logoutFromLine(): void {
-  if (liff.isLoggedIn()) {
-    liff.logout()
+  try {
+    if (initialized && liff.isLoggedIn()) {
+      liff.logout()
+    }
+  } catch {
+    // ignore
   }
 }
 

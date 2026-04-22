@@ -8,6 +8,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [error, setError] = useState('')
+  const [debugInfo, setDebugInfo] = useState('')
 
   useEffect(() => {
     checkExistingLogin()
@@ -15,14 +16,19 @@ export default function LoginPage() {
 
   async function checkExistingLogin() {
     try {
+      setDebugInfo('LIFF初期化中...')
       await initLiff()
+      setDebugInfo('LIFF初期化完了')
 
       if (liff.isLoggedIn()) {
+        setDebugInfo('LINEログイン済み検出')
+
         // 既にローカルにuser情報があればそのままリダイレクト
         const userId = localStorage.getItem('user_id')
         const role = localStorage.getItem('user_role') as UserRole
 
         if (userId && role) {
+          setDebugInfo(`既存ユーザー: ${role} → リダイレクト`)
           window.location.href = role === 'business' ? '/b/home' : '/u/home'
           return
         }
@@ -30,21 +36,30 @@ export default function LoginPage() {
         // LINEログイン済みだがuser未登録 → selected_roleがあればそのまま登録
         const savedRole = localStorage.getItem('selected_role') as UserRole
         if (savedRole) {
+          setDebugInfo(`保存済みロール: ${savedRole} → ユーザー登録中...`)
           await registerUser(savedRole)
           return
         }
 
-        // roleも未選択 → ログイン画面で役割選択させる（ただしLINE認証済み表示）
+        // roleも未選択 → 画面で選ばせる
+        setDebugInfo('ロール未選択 → 選択画面表示')
+      } else {
+        setDebugInfo('未ログイン → 選択画面表示')
       }
     } catch (e: any) {
       console.error('Auth check failed:', e)
+      setDebugInfo(`エラー: ${e.message}`)
+      setError(e.message || '認証チェックに失敗しました')
     }
     setIsCheckingAuth(false)
   }
 
   async function registerUser(role: UserRole) {
     try {
+      setDebugInfo('プロフィール取得中...')
       const profile = await liff.getProfile()
+      setDebugInfo(`プロフィール取得成功: ${profile.displayName}`)
+
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -57,8 +72,8 @@ export default function LoginPage() {
       })
 
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        throw new Error(errData.error || `HTTP ${res.status}`)
+        const errText = await res.text()
+        throw new Error(`API Error ${res.status}: ${errText}`)
       }
 
       const user = await res.json()
@@ -69,9 +84,11 @@ export default function LoginPage() {
       localStorage.setItem('user_nickname', user.nickname || user.display_name)
       localStorage.removeItem('selected_role')
 
+      setDebugInfo(`登録成功: ${user.role} → リダイレクト`)
       window.location.href = user.role === 'business' ? '/b/home' : '/u/home'
     } catch (e: any) {
       setError(e.message || 'ユーザー登録に失敗しました')
+      setDebugInfo(`登録エラー: ${e.message}`)
       setIsLoading(false)
       setIsCheckingAuth(false)
     }
@@ -87,14 +104,15 @@ export default function LoginPage() {
       await initLiff()
 
       if (liff.isLoggedIn()) {
-        // 既にLINEログイン済み → 直接ユーザー登録
+        setDebugInfo('既にログイン済み → 直接登録')
         await registerUser(selectedRole)
       } else {
-        // LINEログインへ → 戻ってきたらcheckExistingLoginで登録される
+        setDebugInfo('LINEログインへリダイレクト...')
         liff.login({ redirectUri: window.location.origin + '/' })
       }
     } catch (e: any) {
       setError(e.message || 'ログインに失敗しました')
+      setDebugInfo(`ログインエラー: ${e.message}`)
       setIsLoading(false)
     }
   }
@@ -104,6 +122,7 @@ export default function LoginPage() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 gap-3">
         <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
         <p className="text-sm text-gray-400 font-bold">認証中...</p>
+        <p className="text-xs text-gray-300 mt-2 px-8 text-center">{debugInfo}</p>
       </div>
     )
   }
@@ -141,6 +160,13 @@ export default function LoginPage() {
         {error && (
           <div className="w-full max-w-sm bg-red-500/20 border border-red-400/40 rounded-2xl p-3 mb-4">
             <p className="text-red-200 text-xs text-center font-bold">{error}</p>
+          </div>
+        )}
+
+        {/* デバッグ情報（開発中のみ表示） */}
+        {debugInfo && (
+          <div className="w-full max-w-sm bg-white/10 border border-white/20 rounded-xl p-2 mb-4">
+            <p className="text-white/60 text-[10px] text-center font-mono">{debugInfo}</p>
           </div>
         )}
 
