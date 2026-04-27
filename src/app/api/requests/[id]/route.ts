@@ -12,7 +12,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // リクエスト本体を取得
   const { data, error } = await supabase
     .from('requests')
-    .select('*, user:users(display_name, company_name, role, nickname)')
+    .select('*, user:users(display_name, company_name, type, nickname)')
     .eq('id', id)
     .single()
 

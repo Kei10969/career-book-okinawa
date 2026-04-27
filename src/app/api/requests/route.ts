@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('requests')
-    .select('*, user:users(display_name, company_name, role, nickname)')
+    .select('*, user:users(display_name, company_name, type, nickname)')
     .eq('status', 'open')
     .order('created_at', { ascending: false })
 
