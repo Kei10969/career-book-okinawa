@@ -8,7 +8,7 @@ import type { UserRole } from '@/types/database'
  */
 
 const DEMO_USER = {
-  id: 'demo-user-001',
+  id: '11111111-1111-1111-1111-111111111111',
   display_name: 'デモユーザー',
   nickname: 'デモさん',
   avatar_url: '',
