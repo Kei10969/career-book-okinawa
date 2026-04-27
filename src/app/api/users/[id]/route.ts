@@ -22,8 +22,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({
     ...data,
-    role: data.role || typeToRole(data.type || 'individual'),
-    nickname: data.nickname || data.display_name,
+    role: typeToRole(data.type || 'individual'),
+    nickname: data.display_name,
   })
 }
 
@@ -47,7 +47,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({
     ...data,
-    role: data.role || typeToRole(data.type || 'individual'),
-    nickname: data.nickname || data.display_name,
+    role: typeToRole(data.type || 'individual'),
+    nickname: data.display_name,
   })
 }

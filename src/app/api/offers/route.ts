@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('offers')
-    .select('*, user:users!from_user_id(display_name, nickname, avatar_url)')
+    .select('*, user:users!from_user_id(display_name, avatar_url)')
     .order('created_at', { ascending: false })
 
   if (fromUserId) query = query.eq('from_user_id', fromUserId)

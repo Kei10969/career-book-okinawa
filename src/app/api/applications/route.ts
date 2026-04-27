@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
   let query = supabase
     .from('applications')
-    .select('*, applicant:users!applicant_id(display_name, nickname, avatar_url)')
+    .select('*, applicant:users!applicant_id(display_name, avatar_url)')
 
   if (requestId) query = query.eq('request_id', requestId)
   if (applicantId) query = query.eq('applicant_id', applicantId)

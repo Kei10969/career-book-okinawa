@@ -52,8 +52,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ...existing,
       ...updates,
-      role: typeToRole(updates.type || existing.type || existing.role || 'individual'),
-      nickname: existing.nickname || existing.display_name,
+      role: typeToRole(updates.type || existing.type || 'individual'),
+      nickname: existing.display_name,
     })
   }
 
