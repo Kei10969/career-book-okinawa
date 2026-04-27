@@ -26,12 +26,18 @@ export default function UserMyPage() {
 
   async function fetchData() {
     const userId = getCurrentUserId()
-    const [appRes, offerRes] = await Promise.all([
-      fetch(`/api/applications?applicant_id=${userId}`),
-      fetch(`/api/offers?from_user_id=${userId}`),
-    ])
-    setApplications(await appRes.json())
-    setOffers(await offerRes.json())
+    try {
+      const [appRes, offerRes] = await Promise.all([
+        fetch(`/api/applications?applicant_id=${userId}`),
+        fetch(`/api/offers?from_user_id=${userId}`),
+      ])
+      const appData = await appRes.json()
+      const offerData = await offerRes.json()
+      setApplications(Array.isArray(appData) ? appData : [])
+      setOffers(Array.isArray(offerData) ? offerData : [])
+    } catch (e) {
+      console.error('fetchData error:', e)
+    }
     setLoading(false)
   }
 

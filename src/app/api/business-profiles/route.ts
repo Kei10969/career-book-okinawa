@@ -20,7 +20,9 @@ export async function GET(req: NextRequest) {
     if (error.code === 'PGRST116') {
       return NextResponse.json(null) // not found
     }
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    // テーブル未作成の場合もnullを返す
+    console.error('business_profiles GET error:', error.message)
+    return NextResponse.json(null)
   }
   return NextResponse.json(data)
 }

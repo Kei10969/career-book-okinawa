@@ -16,17 +16,22 @@ export default function BusinessNotificationsPage() {
 
   async function fetchNotifications() {
     const userId = getCurrentUserId()
-    const res = await fetch(`/api/notifications?user_id=${userId}`)
-    const data = await res.json()
-    setNotifications(data)
+    try {
+      const res = await fetch(`/api/notifications?user_id=${userId}`)
+      const data = await res.json()
+      setNotifications(Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error('fetchNotifications error:', e)
+    }
     setLoading(false)
 
-    // 既読にする
-    await fetch('/api/notifications', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: userId }),
-    })
+    try {
+      await fetch('/api/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId }),
+      })
+    } catch {}
   }
 
   return (

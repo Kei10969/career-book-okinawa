@@ -17,7 +17,11 @@ export async function GET(req: NextRequest) {
   if (fromUserId) query = query.eq('from_user_id', fromUserId)
 
   const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    // offersテーブルが未作成の場合は空配列を返す
+    console.error('offers GET error:', error.message)
+    return NextResponse.json([])
+  }
   return NextResponse.json(data)
 }
 
