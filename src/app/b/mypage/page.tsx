@@ -81,6 +81,17 @@ export default function BusinessMyPage() {
     }
   }
 
+  async function deleteRequest(requestId: string) {
+    if (!confirm('この募集を削除しますか？')) return
+    const userId = getCurrentUserId()
+    const res = await fetch(`/api/requests/${requestId}?user_id=${userId}`, { method: 'DELETE' })
+    if (res.ok) {
+      setRequests((prev) => prev.filter((r) => r.id !== requestId))
+    } else {
+      alert('削除に失敗しました')
+    }
+  }
+
   function handleLogout() {
     logoutFromLine()
     localStorage.clear()
@@ -210,7 +221,15 @@ export default function BusinessMyPage() {
               <EmptyState icon="📝" title="投稿履歴はありません" />
             ) : (
               requests.map((req) => (
-                <RequestCard key={req.id} request={req} linkPrefix="/b" />
+                <div key={req.id} className="relative">
+                  <RequestCard request={req} linkPrefix="/b" />
+                  <button
+                    onClick={() => deleteRequest(req.id)}
+                    className="absolute top-3 right-3 bg-red-50 hover:bg-red-100 text-red-500 hover:text-red-700 text-xs font-bold px-2.5 py-1 rounded-full transition-colors z-10"
+                  >
+                    削除
+                  </button>
+                </div>
               ))
             )}
           </div>

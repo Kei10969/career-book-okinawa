@@ -40,3 +40,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
+
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const userId = req.nextUrl.searchParams.get('user_id')
+
+  // 関連する応募を先に削除
+  await supabase.from('applications').delete().eq('request_id', id)
+
+  let query = supabase.from('requests').delete().eq('id', id)
+  if (userId) query = query.eq('user_id', userId)
+
+  const { error } = await query
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
+}

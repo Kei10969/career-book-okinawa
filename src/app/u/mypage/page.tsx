@@ -53,6 +53,17 @@ export default function UserMyPage() {
     setEditingNickname(false)
   }
 
+  async function deleteOffer(offerId: string) {
+    if (!confirm('このオファーを削除しますか？')) return
+    const userId = getCurrentUserId()
+    const res = await fetch(`/api/offers/${offerId}?from_user_id=${userId}`, { method: 'DELETE' })
+    if (res.ok) {
+      setOffers((prev) => prev.filter((o) => o.id !== offerId))
+    } else {
+      alert('削除に失敗しました')
+    }
+  }
+
   function handleLogout() {
     logoutFromLine()
     localStorage.clear()
@@ -143,7 +154,15 @@ export default function UserMyPage() {
                 <div key={offer.id} className="bg-white rounded-2xl shadow-sm p-3">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-sm font-bold text-gray-900">{offer.trade}</span>
-                    <StatusBadge status={offer.status} />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={offer.status} />
+                      <button
+                        onClick={() => deleteOffer(offer.id)}
+                        className="text-red-400 hover:text-red-600 text-xs font-bold transition-colors"
+                      >
+                        削除
+                      </button>
+                    </div>
                   </div>
                   <p className="text-xs text-gray-500">📍 {offer.area}</p>
                   <p className="text-xs text-gray-400 mt-1 line-clamp-2">{offer.message}</p>
