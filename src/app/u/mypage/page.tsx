@@ -1,12 +1,18 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import AppShell from '@/components/AppShell'
 import StatusBadge from '@/components/StatusBadge'
 import PrimaryButton from '@/components/PrimaryButton'
 import EmptyState from '@/components/EmptyState'
-import { getCurrentUserId, getCurrentUserAvatar } from '@/lib/auth'
+import { getCurrentUserId } from '@/lib/auth'
 import { logoutFromLine } from '@/lib/liff'
 import type { Application, Offer } from '@/types/database'
+
+// カスタムアバター（自分でアップしたもの）かどうか判定
+function isCustomAvatar(url: string | null): boolean {
+  if (!url) return false
+  return url.includes('/avatars/')
+}
 
 export default function UserMyPage() {
   const [nickname, setNickname] = useState('')
@@ -15,12 +21,17 @@ export default function UserMyPage() {
   const [applications, setApplications] = useState<Application[]>([])
   const [offers, setOffers] = useState<Offer[]>([])
   const [loading, setLoading] = useState(true)
-  const avatar = getCurrentUserAvatar()
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const stored = localStorage.getItem('user_nickname') || localStorage.getItem('user_name') || ''
     setNickname(stored)
     setNewNickname(stored)
+    // カスタムアバターのみ表示（LINEアバターは使わない）
+    const savedAvatar = localStorage.getItem('user_avatar') || ''
+    setAvatarUrl(isCustomAvatar(savedAvatar) ? savedAvatar : null)
     fetchData()
   }, [])
 
@@ -53,6 +64,33 @@ export default function UserMyPage() {
     setEditingNickname(false)
   }
 
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    const userId = getCurrentUserId()
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('user_id', userId)
+
+    try {
+      const res = await fetch('/api/avatar', { method: 'POST', body: formData })
+      if (res.ok) {
+        const { avatar_url } = await res.json()
+        setAvatarUrl(avatar_url)
+        localStorage.setItem('user_avatar', avatar_url)
+      } else {
+        alert('アップロードに失敗しました')
+      }
+    } catch {
+      alert('アップロードに失敗しました')
+    }
+    setUploading(false)
+    // inputをリセット
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   async function deleteOffer(offerId: string) {
     if (!confirm('このオファーを削除しますか？')) return
     const userId = getCurrentUserId()
@@ -80,12 +118,33 @@ export default function UserMyPage() {
       <div className="space-y-4">
         {/* プロフィール */}
         <div className="bg-white rounded-2xl shadow-sm p-4 flex items-center gap-4">
-          <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden">
-            {avatar ? (
-              <img src={avatar} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-2xl">👤</span>
-            )}
+          <div className="relative">
+            <div
+              className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden cursor-pointer"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {uploading ? (
+                <div className="animate-spin w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full" />
+              ) : avatarUrl ? (
+                <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+              )}
+            </div>
+            <div className="absolute -bottom-1 -right-1 bg-blue-600 rounded-full w-5 h-5 flex items-center justify-center">
+              <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
           </div>
           <div className="flex-1">
             {editingNickname ? (

@@ -108,7 +108,10 @@ export default function LoginPage() {
       const displayName = user.nickname || user.display_name || profile.displayName
       localStorage.setItem('user_id', user.id)
       localStorage.setItem('user_name', displayName)
-      localStorage.setItem('user_avatar', user.avatar_url || '')
+      // アバターはカスタム（自分でアップしたもの）のみ保存。LINEアバターは匿名のため使わない
+      const avatarUrl = user.avatar_url || ''
+      const isCustom = avatarUrl.includes('/avatars/')
+      localStorage.setItem('user_avatar', isCustom ? avatarUrl : '')
       localStorage.setItem('user_role', user.role)
       localStorage.setItem('user_nickname', displayName)
       localStorage.removeItem('selected_role')
