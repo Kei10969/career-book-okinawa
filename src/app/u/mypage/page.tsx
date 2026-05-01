@@ -89,15 +89,17 @@ export default function UserMyPage() {
           </div>
           <div className="flex-1">
             {editingNickname ? (
-              <div className="flex gap-2">
+              <div className="space-y-2">
                 <input
                   type="text"
                   value={newNickname}
                   onChange={(e) => setNewNickname(e.target.value)}
-                  className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
-                <button onClick={saveNickname} className="text-blue-600 font-bold text-sm">保存</button>
-                <button onClick={() => setEditingNickname(false)} className="text-gray-400 text-sm">取消</button>
+                <div className="flex gap-2">
+                  <button onClick={saveNickname} className="bg-blue-600 text-white font-bold text-xs px-4 py-1.5 rounded-lg">保存</button>
+                  <button onClick={() => setEditingNickname(false)} className="bg-gray-100 text-gray-500 font-bold text-xs px-4 py-1.5 rounded-lg">取消</button>
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-2">
@@ -122,19 +124,28 @@ export default function UserMyPage() {
             <EmptyState icon="📩" title="応募履歴はありません" />
           ) : (
             <div className="space-y-2">
-              {applications.map((app) => (
-                <div key={app.id} className="bg-white rounded-2xl shadow-sm p-3 flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 truncate">
-                      {app.message || '（メッセージなし）'}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {new Date(app.created_at).toLocaleDateString('ja-JP')}
+              {applications.map((app) => {
+                const req = app.request as { title?: string; area?: string; trade?: string } | undefined
+                return (
+                  <div key={app.id} className="bg-white rounded-2xl shadow-sm p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-bold text-gray-900 truncate flex-1 min-w-0">
+                        {req?.title || '（案件情報なし）'}
+                      </p>
+                      <StatusBadge status={app.status} />
+                    </div>
+                    {req && (
+                      <div className="flex gap-2 text-xs text-gray-500 mb-1">
+                        {req.area && <span>📍 {req.area}</span>}
+                        {req.trade && <span>🔧 {req.trade}</span>}
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-400">
+                      {new Date(app.created_at).toLocaleDateString('ja-JP')} 応募
                     </p>
                   </div>
-                  <StatusBadge status={app.status} />
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
