@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { initLiff, liff, isLiffLoggedIn } from '@/lib/liff'
+import { initLiff, liff, isLiffLoggedIn, isInLiffClient } from '@/lib/liff'
 import type { UserRole } from '@/types/database'
 
 export default function LoginPage() {
@@ -9,10 +9,29 @@ export default function LoginPage() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [error, setError] = useState('')
   const [liffReady, setLiffReady] = useState(false)
+  const [alreadyLoggedIn, setAlreadyLoggedIn] = useState(false)
 
   useEffect(() => {
     checkExistingLogin()
   }, [])
+
+  function getSavedRole(): UserRole | null {
+    // 複数の場所からロール情報を復元（リダイレクト後にどこかに残ってることを期待）
+    // 1. URLハッシュ（リダイレクトを確実に生き残る）
+    const hash = window.location.hash
+    const hashMatch = hash.match(/role=(user|business)/)
+    if (hashMatch) return hashMatch[1] as UserRole
+
+    // 2. Cookie
+    const cookie = getCookie('selected_role') as UserRole | null
+    if (cookie) return cookie
+
+    // 3. localStorage
+    const ls = localStorage.getItem('selected_role') as UserRole | null
+    if (ls) return ls
+
+    return null
+  }
 
   async function checkExistingLogin() {
     try {
@@ -36,14 +55,21 @@ export default function LoginPage() {
           return
         }
 
-        // role取得: Cookie > localStorage
-        const roleFromCookie = getCookie('selected_role') as UserRole | null
-        const role = roleFromCookie || localStorage.getItem('selected_role') as UserRole | null
+        // リダイレクト後のロール復元を試みる
+        const role = getSavedRole()
 
         if (role) {
+          // URLハッシュをクリーン
+          if (window.location.hash) {
+            history.replaceState(null, '', window.location.pathname)
+          }
           await registerUser(role)
           return
         }
+
+        // ログイン済みだがロール未選択 → ロール選択画面を表示
+        // （LIFF内ブラウザではliff.login()不要、選択後に即registerUser）
+        setAlreadyLoggedIn(true)
       }
     } catch (e: unknown) {
       console.error('Auth check:', e)
@@ -74,7 +100,6 @@ export default function LoginPage() {
       })
 
       if (!res.ok) {
-        const errText = await res.text()
         throw new Error(`登録エラー: ${res.status}`)
       }
 
@@ -101,16 +126,27 @@ export default function LoginPage() {
     setIsLoading(true)
     setError('')
 
+    // ロール情報を複数箇所に保存（リダイレクト後の復元用）
     localStorage.setItem('selected_role', selectedRole)
     document.cookie = `selected_role=${selectedRole};path=/;max-age=300;SameSite=Lax`
 
+    // 既にLINEログイン済み（LIFF内 or リダイレクト後） → 即登録
     if (liffReady && isLiffLoggedIn()) {
       await registerUser(selectedRole)
       return
     }
 
     if (liffReady) {
-      liff.login()
+      if (isInLiffClient()) {
+        // LIFF内ブラウザでは liff.login() は不要（自動ログイン済みのはず）
+        // ここに来るのは異常系 → フォールバック
+        await registerUser(selectedRole)
+        return
+      }
+      // 外部ブラウザ → LINE認証画面にリダイレクト
+      // ハッシュにロールを入れてリダイレクト後に復元
+      const redirectUrl = `${window.location.origin}/#role=${selectedRole}`
+      liff.login({ redirectUri: redirectUrl })
       return
     }
 
@@ -154,6 +190,12 @@ export default function LoginPage() {
           </div>
         )}
 
+        {alreadyLoggedIn && (
+          <div className="w-full max-w-sm bg-green-500/20 border border-green-400/40 rounded-2xl p-3 mb-4">
+            <p className="text-green-200 text-xs text-center font-bold">✅ LINEログイン済み — 立場を選んでください</p>
+          </div>
+        )}
+
         <div className="w-full max-w-sm space-y-3 mb-6">
           <p className="text-white/90 text-center text-sm font-bold mb-2">あなたの立場を選んでください</p>
 
@@ -187,11 +229,13 @@ export default function LoginPage() {
         </div>
 
         <button onClick={handleLogin} disabled={!selectedRole || isLoading}
-          className={`w-full max-w-sm bg-[#06C755] text-white font-black text-lg py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl transition-all ${
+          className={`w-full max-w-sm ${alreadyLoggedIn ? 'bg-blue-600' : 'bg-[#06C755]'} text-white font-black text-lg py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl transition-all ${
             !selectedRole ? 'opacity-40 cursor-not-allowed' : 'active:scale-[0.98]'
           }`}>
           {isLoading ? (
             <div className="animate-spin w-6 h-6 border-3 border-white border-t-transparent rounded-full" />
+          ) : alreadyLoggedIn ? (
+            '始める'
           ) : (
             <>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="white">
@@ -202,7 +246,9 @@ export default function LoginPage() {
           )}
         </button>
 
-        <p className="text-white/50 text-xs text-center mt-3">LINEアカウントで簡単ログイン</p>
+        {!alreadyLoggedIn && (
+          <p className="text-white/50 text-xs text-center mt-3">LINEアカウントで簡単ログイン</p>
+        )}
       </div>
     </main>
   )
