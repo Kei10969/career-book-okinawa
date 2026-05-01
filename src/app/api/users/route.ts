@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (existing) {
-    // アバター更新
+    // アバター更新のみ（display_nameはユーザーが編集した可能性があるので上書きしない）
     const updates: Record<string, string> = {}
     if (avatar_url && existing.avatar_url !== avatar_url) updates.avatar_url = avatar_url
     // type が違えば更新
@@ -49,11 +49,13 @@ export async function POST(req: NextRequest) {
     }
 
     // フロント向けに role を付与して返す
+    // display_name はDB側（ユーザー編集済み）を優先
     return NextResponse.json({
       ...existing,
       ...updates,
       role: typeToRole(updates.type || existing.type || 'individual'),
       nickname: existing.display_name,
+      line_display_name: display_name, // LINE側の元の名前も返す（参考用）
     })
   }
 

@@ -104,11 +104,13 @@ export default function LoginPage() {
       }
 
       const user = await res.json()
+      // DB側のdisplay_name（ユーザー編集済み）を優先、なければLINEの名前
+      const displayName = user.nickname || user.display_name || profile.displayName
       localStorage.setItem('user_id', user.id)
-      localStorage.setItem('user_name', user.display_name || user.nickname)
+      localStorage.setItem('user_name', displayName)
       localStorage.setItem('user_avatar', user.avatar_url || '')
       localStorage.setItem('user_role', user.role)
-      localStorage.setItem('user_nickname', user.nickname || user.display_name)
+      localStorage.setItem('user_nickname', displayName)
       localStorage.removeItem('selected_role')
       document.cookie = 'selected_role=;path=/;max-age=0'
 

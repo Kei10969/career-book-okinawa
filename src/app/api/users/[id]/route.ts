@@ -31,6 +31,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const { id } = await params
   const body = await req.json()
 
+  // nicknameが送られてきた場合はdisplay_nameとして保存
+  if ('nickname' in body && !('display_name' in body)) {
+    body.display_name = body.nickname
+  }
+
   const allowedFields = ['display_name', 'avatar_url', 'company_name', 'bio', 'skills', 'areas']
   const updates: Record<string, unknown> = {}
   for (const key of allowedFields) {
