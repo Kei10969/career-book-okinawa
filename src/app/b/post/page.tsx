@@ -139,22 +139,22 @@ export default function BusinessPostPage() {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div>
+          <div className="min-w-0">
             <label className={labelClass}>開始日 *</label>
             <input
               type="date"
               value={form.period_start}
               onChange={(e) => updateForm('period_start', e.target.value)}
-              className={inputClass}
+              className={`${inputClass} text-center px-1`}
             />
           </div>
-          <div>
+          <div className="min-w-0">
             <label className={labelClass}>終了日 *</label>
             <input
               type="date"
               value={form.period_end}
               onChange={(e) => updateForm('period_end', e.target.value)}
-              className={inputClass}
+              className={`${inputClass} text-center px-1`}
             />
           </div>
         </div>
