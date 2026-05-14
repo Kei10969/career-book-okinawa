@@ -72,6 +72,7 @@ export default function BusinessProfileSetupPage() {
       })
 
       if (res.ok) {
+        localStorage.setItem('profile_completed', 'true')
         router.push('/b/home')
       } else {
         alert('保存に失敗しました')

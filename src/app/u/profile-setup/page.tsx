@@ -151,6 +151,7 @@ export default function UserProfileSetupPage() {
       })
 
       if (res.ok) {
+        localStorage.setItem('profile_completed', 'true')
         router.push('/u/home')
       } else {
         alert('保存に失敗しました')

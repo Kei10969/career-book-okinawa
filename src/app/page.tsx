@@ -51,31 +51,12 @@ export default function LoginPage() {
         const userRole = localStorage.getItem('user_role') as UserRole
 
         if (userId && userRole) {
-          // プロフィール登録済みかチェックしてからリダイレクト
+          // localStorageのprofile_completedフラグでチェック（APIコール不要）
+          const profileDone = localStorage.getItem('profile_completed') === 'true'
           if (userRole === 'user') {
-            try {
-              const res = await fetch(`/api/users/${userId}`)
-              if (res.ok) {
-                const user = await res.json()
-                if (!user.profile_completed) {
-                  window.location.href = '/u/profile-setup'
-                  return
-                }
-              }
-            } catch {}
-            window.location.href = '/u/home'
+            window.location.href = profileDone ? '/u/home' : '/u/profile-setup'
           } else {
-            try {
-              const res = await fetch(`/api/business-profiles?user_id=${userId}`)
-              if (res.ok) {
-                const profile = await res.json()
-                if (!profile || profile.error) {
-                  window.location.href = '/b/profile-setup'
-                  return
-                }
-              }
-            } catch {}
-            window.location.href = '/b/home'
+            window.location.href = profileDone ? '/b/home' : '/b/profile-setup'
           }
           return
         }
@@ -145,9 +126,11 @@ export default function LoginPage() {
       // 職人（user）の場合: profile_completedチェック
       if (user.role === 'user') {
         if (!user.profile_completed) {
+          localStorage.setItem('profile_completed', 'false')
           window.location.href = '/u/profile-setup'
           return
         }
+        localStorage.setItem('profile_completed', 'true')
         window.location.href = '/u/home'
         return
       }
@@ -158,14 +141,16 @@ export default function LoginPage() {
           const bpRes = await fetch(`/api/business-profiles?user_id=${user.id}`)
           const bpData = await bpRes.json()
           if (!bpData || bpData.error || !bpData.company_name) {
+            localStorage.setItem('profile_completed', 'false')
             window.location.href = '/b/profile-setup'
             return
           }
         } catch {
-          // エラー時はプロフィール登録画面へ
+          localStorage.setItem('profile_completed', 'false')
           window.location.href = '/b/profile-setup'
           return
         }
+        localStorage.setItem('profile_completed', 'true')
         window.location.href = '/b/home'
         return
       }
