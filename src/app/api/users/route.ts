@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
       role: typeToRole(updates.type || existing.type || 'individual'),
       nickname: existing.display_name,
       line_display_name: display_name, // LINE側の元の名前も返す（参考用）
+      profile_completed: existing.profile_completed ?? false,
     })
   }
 
@@ -77,5 +78,6 @@ export async function POST(req: NextRequest) {
     ...newUser,
     role: userRole,
     nickname: newUser.display_name,
+    profile_completed: newUser.profile_completed ?? false,
   })
 }

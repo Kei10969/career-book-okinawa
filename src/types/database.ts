@@ -23,6 +23,8 @@ export type OkinawaCity =
   | '与那原町' | '南風原町' | '八重瀬町' | '大宜味村' | '国頭村'
   | '東村' | '今帰仁村' | '本部町' | '恩納村'
 
+export type ApproachStatus = 'pending' | 'accepted' | 'rejected'
+
 export interface User {
   id: string
   line_id: string | null
@@ -34,6 +36,13 @@ export interface User {
   skills: Trade[]
   areas: OkinawaCity[]
   bio: string | null
+  qualifications: string[]
+  experience_years: string | null
+  desired_salary: string | null
+  job_status: string | null
+  profile_completed: boolean
+  phone: string | null
+  email: string | null
   created_at: string
   updated_at: string
 }
@@ -97,6 +106,18 @@ export interface BusinessProfile {
   updated_at: string
 }
 
+export interface Approach {
+  id: string
+  business_user_id: string
+  worker_user_id: string
+  message: string | null
+  status: ApproachStatus
+  created_at: string
+  updated_at: string
+  business_user?: User
+  worker_user?: User
+}
+
 export interface Notification {
   id: string
   user_id: string
@@ -125,6 +146,13 @@ export type Database = {
           skills?: string[]
           areas?: string[]
           bio?: string | null
+          qualifications?: string[]
+          experience_years?: string | null
+          desired_salary?: string | null
+          job_status?: string | null
+          profile_completed?: boolean
+          phone?: string | null
+          email?: string | null
         }
         Update: {
           id?: string
@@ -137,6 +165,13 @@ export type Database = {
           skills?: string[]
           areas?: string[]
           bio?: string | null
+          qualifications?: string[]
+          experience_years?: string | null
+          desired_salary?: string | null
+          job_status?: string | null
+          profile_completed?: boolean
+          phone?: string | null
+          email?: string | null
         }
       }
       requests: {
@@ -254,6 +289,23 @@ export type Database = {
           link?: string | null
           is_read?: boolean
           related_id?: string | null
+        }
+      }
+      approaches: {
+        Row: Approach
+        Insert: {
+          id?: string
+          business_user_id: string
+          worker_user_id: string
+          message?: string | null
+          status?: ApproachStatus
+        }
+        Update: {
+          id?: string
+          business_user_id?: string
+          worker_user_id?: string
+          message?: string | null
+          status?: ApproachStatus
         }
       }
     }

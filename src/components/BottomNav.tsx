@@ -16,8 +16,8 @@ export default function BottomNav({ role }: BottomNavProps) {
   const navItems = role === 'business'
     ? [
         { href: '/b/home', label: 'ホーム', icon: 'home' },
+        { href: '/b/search', label: '検索', icon: 'search' },
         { href: '/b/post', label: '投稿', icon: 'plus' },
-        { href: '/b/notifications', label: '通知', icon: 'bell' },
         { href: '/b/mypage', label: 'マイページ', icon: 'user' },
       ]
     : [
@@ -36,6 +36,12 @@ export default function BottomNav({ role }: BottomNavProps) {
     home: (active) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
         <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+      </svg>
+    ),
+    search: (active) => (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 2}>
+        <circle cx="11" cy="11" r="8" />
+        <line x1="21" y1="21" x2="16.65" y2="16.65" />
       </svg>
     ),
     plus: (active) => (

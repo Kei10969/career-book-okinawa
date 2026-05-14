@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import StatusBadge from '@/components/StatusBadge'
 import PrimaryButton from '@/components/PrimaryButton'
@@ -15,6 +16,7 @@ function isCustomAvatar(url: string | null): boolean {
 }
 
 export default function UserMyPage() {
+  const router = useRouter()
   const [nickname, setNickname] = useState('')
   const [editingNickname, setEditingNickname] = useState(false)
   const [newNickname, setNewNickname] = useState('')
@@ -171,6 +173,23 @@ export default function UserMyPage() {
             <p className="text-xs text-gray-400 mt-0.5">職人</p>
           </div>
         </div>
+
+        {/* プロフィール編集ボタン */}
+        <button
+          onClick={() => router.push('/u/profile-setup')}
+          className="w-full bg-white rounded-2xl shadow-sm p-4 flex items-center justify-between active:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-xl">📝</span>
+            <div className="text-left">
+              <p className="font-bold text-sm text-gray-900">スキル・プロフィール編集</p>
+              <p className="text-xs text-gray-400">資格・経験・希望条件を設定</p>
+            </div>
+          </div>
+          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
 
         {/* 応募履歴 */}
         <div>

@@ -117,6 +117,34 @@ export default function LoginPage() {
       localStorage.removeItem('selected_role')
       document.cookie = 'selected_role=;path=/;max-age=0'
 
+      // 職人（user）の場合: profile_completedチェック
+      if (user.role === 'user') {
+        if (!user.profile_completed) {
+          window.location.href = '/u/profile-setup'
+          return
+        }
+        window.location.href = '/u/home'
+        return
+      }
+
+      // 企業（business）の場合: business_profileの存在チェック
+      if (user.role === 'business') {
+        try {
+          const bpRes = await fetch(`/api/business-profiles?user_id=${user.id}`)
+          const bpData = await bpRes.json()
+          if (!bpData || bpData.error || !bpData.company_name) {
+            window.location.href = '/b/profile-setup'
+            return
+          }
+        } catch {
+          // エラー時はプロフィール登録画面へ
+          window.location.href = '/b/profile-setup'
+          return
+        }
+        window.location.href = '/b/home'
+        return
+      }
+
       window.location.href = user.role === 'business' ? '/b/home' : '/u/home'
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'ユーザー登録に失敗しました'

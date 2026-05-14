@@ -36,7 +36,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     body.display_name = body.nickname
   }
 
-  const allowedFields = ['display_name', 'avatar_url', 'company_name', 'bio', 'skills', 'areas']
+  const allowedFields = ['display_name', 'avatar_url', 'company_name', 'bio', 'skills', 'areas', 'qualifications', 'experience_years', 'desired_salary', 'job_status', 'profile_completed', 'phone', 'email']
   const updates: Record<string, unknown> = {}
   for (const key of allowedFields) {
     if (key in body) updates[key] = body[key]

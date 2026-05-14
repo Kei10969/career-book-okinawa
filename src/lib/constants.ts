@@ -34,3 +34,43 @@ export const OFFER_STATUS_LABEL: Record<string, string> = {
   matched: '成立',
   closed: '終了',
 }
+
+export const QUALIFICATIONS = [
+  '1級建築施工管理技士', '2級建築施工管理技士',
+  '1級土木施工管理技士', '2級土木施工管理技士',
+  '玉掛け技能講習', '足場の組立て等作業主任者',
+  'クレーン運転士', '移動式クレーン運転士',
+  'フォークリフト運転技能者', '車両系建設機械運転者',
+  '酸素欠乏危険作業主任者', '有機溶剤作業主任者',
+  '電気工事士（第一種）', '電気工事士（第二種）',
+  '配管技能士', '溶接技能者',
+  'その他'
+] as const
+
+export const EXPERIENCE_YEARS = [
+  '1年未満', '1〜3年', '3〜5年', '5〜10年', '10〜20年', '20年以上'
+] as const
+
+export const DESIRED_SALARY = [
+  '12,000円/日以上', '15,000円/日以上', '18,000円/日以上',
+  '20,000円/日以上', '25,000円/日以上', '30,000円/日以上',
+  '応相談'
+] as const
+
+export const JOB_STATUS = [
+  { value: 'immediate', label: '今すぐ転職希望' },
+  { value: 'considering', label: '良い案件があれば検討' },
+  { value: 'not_looking', label: '今は探していない' },
+] as const
+
+export const JOB_STATUS_LABEL: Record<string, string> = {
+  immediate: '今すぐ転職希望',
+  considering: '良い案件があれば検討',
+  not_looking: '今は探していない',
+}
+
+export const APPROACH_STATUS_LABEL: Record<string, string> = {
+  pending: 'アプローチ中',
+  accepted: '承諾',
+  rejected: '辞退',
+}
