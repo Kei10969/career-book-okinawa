@@ -51,7 +51,32 @@ export default function LoginPage() {
         const userRole = localStorage.getItem('user_role') as UserRole
 
         if (userId && userRole) {
-          window.location.href = userRole === 'business' ? '/b/home' : '/u/home'
+          // プロフィール登録済みかチェックしてからリダイレクト
+          if (userRole === 'user') {
+            try {
+              const res = await fetch(`/api/users/${userId}`)
+              if (res.ok) {
+                const user = await res.json()
+                if (!user.profile_completed) {
+                  window.location.href = '/u/profile-setup'
+                  return
+                }
+              }
+            } catch {}
+            window.location.href = '/u/home'
+          } else {
+            try {
+              const res = await fetch(`/api/business-profiles?user_id=${userId}`)
+              if (res.ok) {
+                const profile = await res.json()
+                if (!profile || profile.error) {
+                  window.location.href = '/b/profile-setup'
+                  return
+                }
+              }
+            } catch {}
+            window.location.href = '/b/home'
+          }
           return
         }
 
