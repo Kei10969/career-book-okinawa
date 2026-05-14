@@ -198,13 +198,13 @@ export default function BusinessPostPage() {
           <span className="text-sm font-bold text-gray-700">🔥 急募にする</span>
           <button
             onClick={() => updateForm('is_urgent', !form.is_urgent)}
-            className={`relative w-12 h-7 rounded-full transition-all ${
+            className={`relative inline-flex items-center w-12 h-7 rounded-full transition-colors ${
               form.is_urgent ? 'bg-orange-500' : 'bg-gray-300'
             }`}
           >
             <span
-              className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-sm transition-transform ${
-                form.is_urgent ? 'translate-x-5' : 'translate-x-0.5'
+              className={`inline-block w-5 h-5 bg-white rounded-full shadow-md transition-transform ${
+                form.is_urgent ? 'translate-x-6' : 'translate-x-1'
               }`}
             />
           </button>
