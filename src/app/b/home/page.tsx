@@ -21,11 +21,13 @@ interface OfferItem {
 
 export default function BusinessHomePage() {
   const [requests, setRequests] = useState<Request[]>([])
+  const [allRequests, setAllRequests] = useState<Request[]>([])
   const [applications, setApplications] = useState<OfferItem[]>([])
   const [loading, setLoading] = useState(true)
   const [companyName, setCompanyName] = useState('')
   const [stats, setStats] = useState({ posts: 0, applications: 0, pending: 0, matched: 0 })
   const [appFilter, setAppFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
+  const [reqTab, setReqTab] = useState<'all' | 'support' | 'subcontract'>('all')
 
   useEffect(() => {
     const stored = localStorage.getItem('user_nickname') || localStorage.getItem('user_name') || ''
@@ -69,6 +71,10 @@ export default function BusinessHomePage() {
         pending: pendingCount,
         matched: matchedCount,
       })
+      // 全募集一覧（他社含む）を取得
+      const allReqRes = await fetch('/api/requests')
+      const allReqData = await allReqRes.json()
+      setAllRequests(Array.isArray(allReqData) ? allReqData : [])
     } catch (e) {
       console.error('fetchData error:', e)
     }
@@ -237,6 +243,42 @@ export default function BusinessHomePage() {
                 <RequestCard key={req.id} request={req} linkPrefix="/b" />
               ))
             )}
+          </div>
+
+          {/* 全募集一覧（応援・下請け） */}
+          <div>
+            <h2 className="font-bold text-sm text-gray-500 mb-3">📋 募集一覧（応援・下請け）</h2>
+            <div className="flex gap-2 mb-3">
+              {([
+                { key: 'all', label: 'すべて' },
+                { key: 'support', label: '👷 応援' },
+                { key: 'subcontract', label: '🏢 下請け' },
+              ] as const).map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setReqTab(tab.key)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                    reqTab === tab.key
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-gray-100 text-gray-500'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            {(() => {
+              const filtered = reqTab === 'all'
+                ? allRequests
+                : allRequests.filter(r => r.type === reqTab)
+              return filtered.length === 0 ? (
+                <EmptyState icon="📋" title="募集がありません" />
+              ) : (
+                filtered.map((req) => (
+                  <RequestCard key={req.id} request={req} linkPrefix="/b" />
+                ))
+              )
+            })()}
           </div>
         </div>
       )}
