@@ -1,4 +1,5 @@
 'use client'
+import { useProfileGuard } from '@/lib/useProfileGuard'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
@@ -24,6 +25,9 @@ const JOB_STATUS_BADGE: Record<string, string> = {
 }
 
 export default function BusinessSearchPage() {
+  const { checking } = useProfileGuard('business')
+  if (checking) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+
   const router = useRouter()
   const [workers, setWorkers] = useState<WorkerProfile[]>([])
   const [loading, setLoading] = useState(true)

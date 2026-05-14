@@ -1,4 +1,5 @@
 'use client'
+import { useProfileGuard } from '@/lib/useProfileGuard'
 import { useState, useEffect } from 'react'
 import AppShell from '@/components/AppShell'
 import SummaryCard from '@/components/SummaryCard'
@@ -20,6 +21,9 @@ interface OfferItem {
 }
 
 export default function BusinessHomePage() {
+  const { checking } = useProfileGuard('business')
+  if (checking) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
+
   const [requests, setRequests] = useState<Request[]>([])
   const [applications, setApplications] = useState<OfferItem[]>([])
   const [loading, setLoading] = useState(true)

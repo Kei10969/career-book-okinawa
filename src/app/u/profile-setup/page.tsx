@@ -166,7 +166,7 @@ export default function UserProfileSetupPage() {
 
   if (loading) {
     return (
-      <AppShell role="user" header={<h1 className="font-black text-lg text-gray-900">📝 プロフィール登録</h1>}>
+      <AppShell role="user" hideNav header={<h1 className="font-black text-lg text-gray-900">📝 プロフィール登録</h1>}>
         <div className="flex justify-center py-12">
           <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
         </div>
@@ -175,7 +175,7 @@ export default function UserProfileSetupPage() {
   }
 
   return (
-    <AppShell
+    <AppShell hideNav
       role="user"
       header={<h1 className="font-black text-lg text-gray-900">📝 プロフィール登録</h1>}
     >
