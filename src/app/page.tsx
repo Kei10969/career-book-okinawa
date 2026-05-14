@@ -51,13 +51,7 @@ export default function LoginPage() {
         const userRole = localStorage.getItem('user_role') as UserRole
 
         if (userId && userRole) {
-          // localStorageのprofile_completedフラグでチェック（APIコール不要）
-          const profileDone = localStorage.getItem('profile_completed') === 'true'
-          if (userRole === 'user') {
-            window.location.href = profileDone ? '/u/home' : '/u/profile-setup'
-          } else {
-            window.location.href = profileDone ? '/b/home' : '/b/profile-setup'
-          }
+          window.location.href = userRole === 'business' ? '/b/home' : '/u/home'
           return
         }
 
@@ -126,11 +120,9 @@ export default function LoginPage() {
       // 職人（user）の場合: profile_completedチェック
       if (user.role === 'user') {
         if (!user.profile_completed) {
-          localStorage.setItem('profile_completed', 'false')
           window.location.href = '/u/profile-setup'
           return
         }
-        localStorage.setItem('profile_completed', 'true')
         window.location.href = '/u/home'
         return
       }
@@ -141,16 +133,14 @@ export default function LoginPage() {
           const bpRes = await fetch(`/api/business-profiles?user_id=${user.id}`)
           const bpData = await bpRes.json()
           if (!bpData || bpData.error || !bpData.company_name) {
-            localStorage.setItem('profile_completed', 'false')
             window.location.href = '/b/profile-setup'
             return
           }
         } catch {
-          localStorage.setItem('profile_completed', 'false')
+          // エラー時はプロフィール登録画面へ
           window.location.href = '/b/profile-setup'
           return
         }
-        localStorage.setItem('profile_completed', 'true')
         window.location.href = '/b/home'
         return
       }

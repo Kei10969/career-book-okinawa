@@ -1,5 +1,4 @@
 'use client'
-import { useProfileGuard } from '@/lib/useProfileGuard'
 import { useState, useEffect } from 'react'
 import AppShell from '@/components/AppShell'
 import PrimaryButton from '@/components/PrimaryButton'
@@ -11,9 +10,6 @@ import { OKINAWA_CITIES } from '@/lib/constants'
 import type { BusinessProfile, Request } from '@/types/database'
 
 export default function BusinessMyPage() {
-  const { checking } = useProfileGuard('business')
-  if (checking) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
-
   const [profile, setProfile] = useState<BusinessProfile | null>(null)
   const [requests, setRequests] = useState<Request[]>([])
   const [loading, setLoading] = useState(true)

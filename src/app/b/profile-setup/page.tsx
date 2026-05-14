@@ -72,7 +72,6 @@ export default function BusinessProfileSetupPage() {
       })
 
       if (res.ok) {
-        localStorage.setItem('profile_completed', 'true')
         router.push('/b/home')
       } else {
         alert('保存に失敗しました')
@@ -88,7 +87,7 @@ export default function BusinessProfileSetupPage() {
 
   if (loading) {
     return (
-      <AppShell role="business" hideNav header={<h1 className="font-black text-lg text-gray-900">🏢 企業プロフィール登録</h1>}>
+      <AppShell role="business" header={<h1 className="font-black text-lg text-gray-900">🏢 企業プロフィール登録</h1>}>
         <div className="flex justify-center py-12">
           <div className="animate-spin w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full" />
         </div>
@@ -97,7 +96,7 @@ export default function BusinessProfileSetupPage() {
   }
 
   return (
-    <AppShell hideNav
+    <AppShell
       role="business"
       header={<h1 className="font-black text-lg text-gray-900">🏢 企業プロフィール登録</h1>}
     >

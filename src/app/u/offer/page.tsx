@@ -1,5 +1,4 @@
 'use client'
-import { useProfileGuard } from '@/lib/useProfileGuard'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
@@ -8,9 +7,6 @@ import { OKINAWA_CITIES, TRADES } from '@/lib/constants'
 import { getCurrentUserId } from '@/lib/auth'
 
 export default function UserOfferPage() {
-  const { checking } = useProfileGuard('user')
-  if (checking) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>
-
   const router = useRouter()
   const [form, setForm] = useState({
     area: '',
