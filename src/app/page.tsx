@@ -177,9 +177,9 @@ export default function LoginPage() {
         return
       }
       // 外部ブラウザ → LINE認証画面にリダイレクト
-      // ハッシュにロールを入れてリダイレクト後に復元
-      const redirectUrl = `${window.location.origin}/#role=${selectedRole}`
-      liff.login({ redirectUri: redirectUrl })
+      // redirectUriは指定しない（LIFFのデフォルトエンドポイントURLに戻る）
+      // リダイレクト後はisLiffLoggedIn()=trueになり、ロール選択画面を再表示
+      liff.login()
       return
     }
 
