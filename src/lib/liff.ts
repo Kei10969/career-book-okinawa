@@ -14,10 +14,14 @@ export async function initLiff(): Promise<boolean> {
   try {
     await liff.init({ liffId })
     initialized = true
+    console.log('LIFF init success. isLoggedIn:', liff.isLoggedIn(), 'isInClient:', liff.isInClient())
     return true
   } catch (e: any) {
-    console.error('LIFF init error:', e)
-    // LIFF初期化に失敗してもアプリは動かす
+    console.error('LIFF init error:', e?.code, e?.message, e)
+    // 認証コードがURLにある場合、LIFF initがトークン交換に失敗した可能性
+    if (typeof window !== 'undefined' && window.location.search.includes('code=')) {
+      console.error('LIFF init failed with auth code in URL. Possible channel mismatch or PKCE error.')
+    }
     return false
   }
 }

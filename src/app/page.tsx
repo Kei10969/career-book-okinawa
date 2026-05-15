@@ -54,9 +54,20 @@ export default function LoginPage() {
 
       // デバッグ: 認証コードがあるのにログインできてない場合
       if (hasCode && !loggedIn) {
-        setError(`認証コードを受信しましたがログイン処理が完了しませんでした。もう一度お試しください。`)
-        setIsCheckingAuth(false)
-        return
+        // LIFF initは成功したがisLoggedIn=falseの場合
+        // URLからcodeを除去してリトライを試みる
+        const cleanUrl = window.location.origin + window.location.pathname
+        window.history.replaceState({}, '', cleanUrl)
+        // アクセストークンが実はあるかチェック
+        const token = liff.getAccessToken()
+        if (token) {
+          // トークンはあるのにisLoggedInがfalse → 異常だがログイン扱いで進める
+          console.log('Token exists but isLoggedIn=false, proceeding anyway')
+        } else {
+          setError(`ログイン処理が完了しませんでした。LINEアプリから直接開くか、もう一度お試しください。`)
+          setIsCheckingAuth(false)
+          return
+        }
       }
 
       if (loggedIn) {
@@ -186,18 +197,13 @@ export default function LoginPage() {
     if (liffReady) {
       if (isInLiffClient()) {
         // LIFF内ブラウザでは liff.login() は不要（自動ログイン済みのはず）
-        // ここに来るのは異常系 → フォールバック
         await registerUser(selectedRole)
         return
       }
-      // 外部ブラウザ → LINE認証画面にリダイレクト
-      // redirectUriは指定しない（LIFFのデフォルトエンドポイントURLに戻る）
-      // リダイレクト後はisLiffLoggedIn()=trueになり、ロール選択画面を再表示
-      liff.login()
-      return
     }
 
-    // LIFFが使えない場合のフォールバック
+    // 外部ブラウザ or LIFF未初期化 → LIFF URLで直接開く
+    // これによりLINEアプリが起動し、LIFF内ブラウザで確実にログインされる
     const liffId = process.env.NEXT_PUBLIC_LIFF_ID
     if (liffId) {
       window.location.href = `https://liff.line.me/${liffId}`
