@@ -38,12 +38,26 @@ export default function LoginPage() {
       const ok = await initLiff()
       setLiffReady(ok)
 
+      // デバッグ: URLにcodeパラメータがあるか確認
+      const urlParams = new URLSearchParams(window.location.search)
+      const hasCode = urlParams.has('code')
+
       if (!ok) {
+        if (hasCode) {
+          setError(`LIFF初期化失敗（認証コードあり）。ブラウザのCookieを有効にしてください。`)
+        }
         setIsCheckingAuth(false)
         return
       }
 
       const loggedIn = isLiffLoggedIn()
+
+      // デバッグ: 認証コードがあるのにログインできてない場合
+      if (hasCode && !loggedIn) {
+        setError(`認証コードを受信しましたがログイン処理が完了しませんでした。もう一度お試しください。`)
+        setIsCheckingAuth(false)
+        return
+      }
 
       if (loggedIn) {
         // 既にローカルにuser情報があればリダイレクト
