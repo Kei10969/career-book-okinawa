@@ -10,90 +10,64 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [liffReady, setLiffReady] = useState(false)
   const [alreadyLoggedIn, setAlreadyLoggedIn] = useState(false)
+  const [lineProfile, setLineProfile] = useState<{ userId: string; displayName: string; pictureUrl: string | null } | null>(null)
 
   useEffect(() => {
     checkExistingLogin()
   }, [])
 
-  function getSavedRole(): UserRole | null {
-    // 複数の場所からロール情報を復元（リダイレクト後にどこかに残ってることを期待）
-    // 1. URLハッシュ（リダイレクトを確実に生き残る）
-    const hash = window.location.hash
-    const hashMatch = hash.match(/role=(user|business)/)
-    if (hashMatch) return hashMatch[1] as UserRole
-
-    // 2. Cookie
-    const cookie = getCookie('selected_role') as UserRole | null
-    if (cookie) return cookie
-
-    // 3. localStorage
-    const ls = localStorage.getItem('selected_role') as UserRole | null
-    if (ls) return ls
-
-    return null
-  }
-
   async function checkExistingLogin() {
     try {
-      const ok = await initLiff()
-      setLiffReady(ok)
+      // 1. localStorageにユーザー情報がある → ホームへ
+      const userId = localStorage.getItem('user_id')
+      const userRole = localStorage.getItem('user_role') as UserRole
+      if (userId && userRole) {
+        window.location.href = userRole === 'business' ? '/b/home' : '/u/home'
+        return
+      }
 
-      // デバッグ: URLにcodeパラメータがあるか確認
+      // 2. URLに認証コードがある → サーバーAPIでプロフィール取得
       const urlParams = new URLSearchParams(window.location.search)
-      const hasCode = urlParams.has('code')
+      const code = urlParams.get('code')
+      if (code) {
+        // URLをクリーン
+        window.history.replaceState({}, '', window.location.pathname)
 
-      if (!ok) {
-        if (hasCode) {
-          setError(`LIFF初期化失敗（認証コードあり）。ブラウザのCookieを有効にしてください。`)
+        const res = await fetch('/api/auth/line', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        })
+
+        if (res.ok) {
+          const profile = await res.json()
+          setLineProfile(profile)
+          setAlreadyLoggedIn(true)
+
+          // ロール情報が保存されてたら即登録
+          const savedRole = localStorage.getItem('selected_role') as UserRole | null
+          if (savedRole) {
+            await registerUserWithProfile(profile, savedRole)
+            return
+          }
+        } else {
+          setError('LINEログインに失敗しました。もう一度お試しください。')
         }
         setIsCheckingAuth(false)
         return
       }
 
-      const loggedIn = isLiffLoggedIn()
+      // 3. LIFF初期化
+      const ok = await initLiff()
+      setLiffReady(ok)
 
-      // デバッグ: 認証コードがあるのにログインできてない場合
-      if (hasCode && !loggedIn) {
-        // LIFF initは成功したがisLoggedIn=falseの場合
-        // URLからcodeを除去してリトライを試みる
-        const cleanUrl = window.location.origin + window.location.pathname
-        window.history.replaceState({}, '', cleanUrl)
-        // アクセストークンが実はあるかチェック
-        const token = liff.getAccessToken()
-        if (token) {
-          // トークンはあるのにisLoggedInがfalse → 異常だがログイン扱いで進める
-          console.log('Token exists but isLoggedIn=false, proceeding anyway')
-        } else {
-          setError(`ログイン処理が完了しませんでした。LINEアプリから直接開くか、もう一度お試しください。`)
-          setIsCheckingAuth(false)
+      if (ok && isLiffLoggedIn()) {
+        // LIFF内ブラウザでログイン済み
+        const savedRole = localStorage.getItem('selected_role') as UserRole | null
+        if (savedRole) {
+          await registerUser(savedRole)
           return
         }
-      }
-
-      if (loggedIn) {
-        // 既にローカルにuser情報があればリダイレクト
-        const userId = localStorage.getItem('user_id')
-        const userRole = localStorage.getItem('user_role') as UserRole
-
-        if (userId && userRole) {
-          window.location.href = userRole === 'business' ? '/b/home' : '/u/home'
-          return
-        }
-
-        // リダイレクト後のロール復元を試みる
-        const role = getSavedRole()
-
-        if (role) {
-          // URLハッシュをクリーン
-          if (window.location.hash) {
-            history.replaceState(null, '', window.location.pathname)
-          }
-          await registerUser(role)
-          return
-        }
-
-        // ログイン済みだがロール未選択 → ロール選択画面を表示
-        // （LIFF内ブラウザではliff.login()不要、選択後に即registerUser）
         setAlreadyLoggedIn(true)
       }
     } catch (e: unknown) {
@@ -104,15 +78,11 @@ export default function LoginPage() {
     setIsCheckingAuth(false)
   }
 
-  function getCookie(name: string): string | null {
-    const match = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith(name + '='))
-    return match ? match.split('=')[1] : null
-  }
-
-  async function registerUser(role: UserRole) {
+  async function registerUserWithProfile(
+    profile: { userId: string; displayName: string; pictureUrl: string | null },
+    role: UserRole
+  ) {
     try {
-      const profile = await liff.getProfile()
-
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -124,53 +94,11 @@ export default function LoginPage() {
         }),
       })
 
-      if (!res.ok) {
-        throw new Error(`登録エラー: ${res.status}`)
-      }
+      if (!res.ok) throw new Error(`登録エラー: ${res.status}`)
 
       const user = await res.json()
-      // DB側のdisplay_name（ユーザー編集済み）を優先、なければLINEの名前
-      const displayName = user.nickname || user.display_name || profile.displayName
-      localStorage.setItem('user_id', user.id)
-      localStorage.setItem('user_name', displayName)
-      // アバターはカスタム（自分でアップしたもの）のみ保存。LINEアバターは匿名のため使わない
-      const avatarUrl = user.avatar_url || ''
-      const isCustom = avatarUrl.includes('/avatars/')
-      localStorage.setItem('user_avatar', isCustom ? avatarUrl : '')
-      localStorage.setItem('user_role', user.role)
-      localStorage.setItem('user_nickname', displayName)
-      localStorage.removeItem('selected_role')
-      document.cookie = 'selected_role=;path=/;max-age=0'
-
-      // 職人（user）の場合: profile_completedチェック
-      if (user.role === 'user') {
-        if (!user.profile_completed) {
-          window.location.href = '/u/profile-setup'
-          return
-        }
-        window.location.href = '/u/home'
-        return
-      }
-
-      // 企業（business）の場合: business_profileの存在チェック
-      if (user.role === 'business') {
-        try {
-          const bpRes = await fetch(`/api/business-profiles?user_id=${user.id}`)
-          const bpData = await bpRes.json()
-          if (!bpData || bpData.error || !bpData.company_name) {
-            window.location.href = '/b/profile-setup'
-            return
-          }
-        } catch {
-          // エラー時はプロフィール登録画面へ
-          window.location.href = '/b/profile-setup'
-          return
-        }
-        window.location.href = '/b/home'
-        return
-      }
-
-      window.location.href = user.role === 'business' ? '/b/home' : '/u/home'
+      saveUserToLocalStorage(user, profile.displayName)
+      redirectAfterLogin(user)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'ユーザー登録に失敗しました'
       setError(msg)
@@ -179,36 +107,88 @@ export default function LoginPage() {
     }
   }
 
+  async function registerUser(role: UserRole) {
+    try {
+      const profile = await liff.getProfile()
+      await registerUserWithProfile(
+        { userId: profile.userId, displayName: profile.displayName, pictureUrl: profile.pictureUrl || null },
+        role
+      )
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'ユーザー登録に失敗しました'
+      setError(msg)
+      setIsLoading(false)
+      setIsCheckingAuth(false)
+    }
+  }
+
+  function saveUserToLocalStorage(user: Record<string, unknown>, lineDisplayName: string) {
+    const displayName = (user.nickname || user.display_name || lineDisplayName) as string
+    localStorage.setItem('user_id', user.id as string)
+    localStorage.setItem('user_name', displayName)
+    const avatarUrl = (user.avatar_url || '') as string
+    const isCustom = avatarUrl.includes('/avatars/')
+    localStorage.setItem('user_avatar', isCustom ? avatarUrl : '')
+    localStorage.setItem('user_role', user.role as string)
+    localStorage.setItem('user_nickname', displayName)
+    localStorage.removeItem('selected_role')
+  }
+
+  function redirectAfterLogin(user: Record<string, unknown>) {
+    if (user.role === 'user') {
+      if (!user.profile_completed) {
+        window.location.href = '/u/profile-setup'
+        return
+      }
+      window.location.href = '/u/home'
+      return
+    }
+
+    // 企業の場合: business_profileチェック
+    fetch(`/api/business-profiles?user_id=${user.id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (!data || data.error || !data.company_name) {
+          window.location.href = '/b/profile-setup'
+        } else {
+          window.location.href = '/b/home'
+        }
+      })
+      .catch(() => {
+        window.location.href = '/b/profile-setup'
+      })
+  }
+
   async function handleLogin() {
     if (!selectedRole) return
     setIsLoading(true)
     setError('')
 
-    // ロール情報を複数箇所に保存（リダイレクト後の復元用）
     localStorage.setItem('selected_role', selectedRole)
-    document.cookie = `selected_role=${selectedRole};path=/;max-age=300;SameSite=Lax`
 
-    // 既にLINEログイン済み（LIFF内 or リダイレクト後） → 即登録
+    // LINE認証済み（プロフィール取得済み）→ 即登録
+    if (lineProfile) {
+      await registerUserWithProfile(lineProfile, selectedRole)
+      return
+    }
+
+    // LIFF内ブラウザでログイン済み → 即登録
     if (liffReady && isLiffLoggedIn()) {
       await registerUser(selectedRole)
       return
     }
 
-    if (liffReady) {
-      if (isInLiffClient()) {
-        // LIFF内ブラウザでは liff.login() は不要（自動ログイン済みのはず）
-        await registerUser(selectedRole)
-        return
-      }
-      // 外部ブラウザ → liff.login() でLINE認証画面へ
-      // withLoginOnExternalBrowserがtrueなので、外部ブラウザのまま認証が完了する
-      liff.login()
+    if (liffReady && isInLiffClient()) {
+      await registerUser(selectedRole)
       return
     }
 
-    // LIFFが使えない場合のフォールバック
-    setError('LINEログインの初期化に失敗しました。ページを再読み込みしてください。')
-    setIsLoading(false)
+    // 外部ブラウザ → LINE OAuth認証URLに直接リダイレクト
+    const channelId = process.env.NEXT_PUBLIC_LIFF_ID?.split('-')[0]
+    const redirectUri = encodeURIComponent(window.location.origin)
+    const state = Math.random().toString(36).substring(2)
+    const loginUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${channelId}&redirect_uri=${redirectUri}&state=${state}&scope=profile%20openid`
+    window.location.href = loginUrl
   }
 
   if (isCheckingAuth) {
