@@ -12,9 +12,12 @@ export async function initLiff(): Promise<boolean> {
   }
 
   try {
+    // URLに認証コードがある場合（LINE認証後のリダイレクト）は
+    // withLoginOnExternalBrowserをtrueにしてトークン交換を実行
+    const hasAuthCode = typeof window !== 'undefined' && window.location.search.includes('code=')
     await liff.init({
       liffId,
-      withLoginOnExternalBrowser: true,
+      withLoginOnExternalBrowser: hasAuthCode,
     })
     initialized = true
     return true
