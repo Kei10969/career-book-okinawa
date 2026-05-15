@@ -200,17 +200,15 @@ export default function LoginPage() {
         await registerUser(selectedRole)
         return
       }
+      // 外部ブラウザ → liff.login() でLINE認証画面へ
+      // withLoginOnExternalBrowserがtrueなので、外部ブラウザのまま認証が完了する
+      liff.login()
+      return
     }
 
-    // 外部ブラウザ or LIFF未初期化 → LIFF URLで直接開く
-    // これによりLINEアプリが起動し、LIFF内ブラウザで確実にログインされる
-    const liffId = process.env.NEXT_PUBLIC_LIFF_ID
-    if (liffId) {
-      window.location.href = `https://liff.line.me/${liffId}`
-    } else {
-      setError('LIFF IDが設定されていません')
-      setIsLoading(false)
-    }
+    // LIFFが使えない場合のフォールバック
+    setError('LINEログインの初期化に失敗しました。ページを再読み込みしてください。')
+    setIsLoading(false)
   }
 
   if (isCheckingAuth) {
