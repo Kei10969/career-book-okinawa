@@ -115,6 +115,9 @@ export default function UserHomePage() {
                       <p className="font-bold text-sm text-gray-800">
                         {approach.business_profile?.company_name || '企業'}
                       </p>
+                      {approach.business_profile?.contact_name && (
+                        <p className="text-[11px] text-gray-500">担当: {approach.business_profile.contact_name}</p>
+                      )}
                       {approach.business_profile?.area && (
                         <p className="text-[11px] text-gray-400">📍 {approach.business_profile.area}</p>
                       )}
@@ -130,6 +133,14 @@ export default function UserHomePage() {
                   </span>
                 </div>
 
+                {/* 企業紹介 */}
+                {approach.business_profile?.description && (
+                  <div className="bg-gray-50 rounded-lg px-3 py-2 mb-2">
+                    <p className="text-[11px] text-gray-400 mb-0.5">会社紹介</p>
+                    <p className="text-xs text-gray-600 line-clamp-3">{approach.business_profile.description}</p>
+                  </div>
+                )}
+
                 {approach.message && (
                   <p className="text-sm text-gray-600 bg-orange-50 rounded-lg px-3 py-2 mb-3">
                     💬 {approach.message}
@@ -138,7 +149,13 @@ export default function UserHomePage() {
 
                 {approach.status === 'accepted' && (
                   <div className="bg-green-50 rounded-lg px-3 py-2 mb-3">
-                    <p className="text-xs text-green-700 font-bold">✅ 連絡先が企業に開示されました</p>
+                    <p className="text-xs text-green-700 font-bold">✅ 承諾済み — 連絡先が企業に開示されました</p>
+                  </div>
+                )}
+
+                {approach.status === 'rejected' && (
+                  <div className="bg-gray-50 rounded-lg px-3 py-2 mb-3">
+                    <p className="text-xs text-gray-500">辞退済み</p>
                   </div>
                 )}
 

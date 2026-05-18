@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { sendLinePush } from '@/lib/line-notify'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -116,5 +117,30 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 職人にアプリ内通知を送信
+  await supabase.from('notifications').insert({
+    user_id: worker_user_id,
+    type: 'new_application',
+    title: '🏢 企業からアプローチが届きました！',
+    message: '内容を確認して、承諾するかどうかお選びください。',
+    link: '/u/home',
+    is_read: false,
+  })
+
+  // 職人にLINEプッシュ通知を送信
+  const { data: workerUser } = await supabase
+    .from('users')
+    .select('line_id')
+    .eq('id', worker_user_id)
+    .single()
+
+  if (workerUser?.line_id) {
+    await sendLinePush(
+      workerUser.line_id,
+      '🏢 企業からアプローチが届きました！\nアプリで内容を確認してください。'
+    )
+  }
+
   return NextResponse.json(data)
 }

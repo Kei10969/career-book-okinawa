@@ -6,6 +6,7 @@ import RequestCard from '@/components/RequestCard'
 import EmptyState from '@/components/EmptyState'
 import StatusBadge from '@/components/StatusBadge'
 import type { Request } from '@/types/database'
+import { useRouter } from 'next/navigation'
 import { getCurrentUserId } from '@/lib/auth'
 
 interface OfferItem {
@@ -44,6 +45,7 @@ interface WorkerOffer {
 }
 
 export default function BusinessHomePage() {
+  const router = useRouter()
   const [requests, setRequests] = useState<Request[]>([])
   const [allRequests, setAllRequests] = useState<Request[]>([])
   const [applications, setApplications] = useState<OfferItem[]>([])
@@ -335,7 +337,11 @@ export default function BusinessHomePage() {
               <h2 className="font-bold text-sm text-gray-500 mb-3">💼 職人からのオファー</h2>
               <div className="space-y-2">
                 {workerOffers.map((offer) => (
-                  <div key={offer.id} className="bg-white rounded-2xl shadow-sm p-4 border border-gray-100">
+                  <div
+                    key={offer.id}
+                    className="bg-white rounded-2xl shadow-sm p-4 border border-gray-100 cursor-pointer active:scale-[0.99] transition-all"
+                    onClick={() => router.push(`/b/offers/${offer.id}`)}
+                  >
                     <div className="flex items-center gap-2.5 mb-2">
                       <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm">👤</div>
                       <div>
@@ -352,7 +358,8 @@ export default function BusinessHomePage() {
                         📋 {offer.condition}
                       </p>
                     )}
-                    <p className="text-xs text-gray-700 whitespace-pre-wrap">{offer.message}</p>
+                    <p className="text-xs text-gray-700 whitespace-pre-wrap line-clamp-2">{offer.message}</p>
+                    <p className="text-[10px] text-orange-500 font-bold mt-2">詳細を見る →</p>
                   </div>
                 ))}
               </div>
