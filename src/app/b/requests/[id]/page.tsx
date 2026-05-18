@@ -36,9 +36,17 @@ export default function BusinessRequestDetailPage({ params }: { params: Promise<
       body: JSON.stringify({ id: appId, status }),
     })
     if (res.ok) {
+      const result = await res.json()
       setApplications((prev) =>
-        prev.map((a) => (a.id === appId ? { ...a, status: status as Application['status'] } : a))
+        prev.map((a) => (a.id === appId ? { ...a, status: status as Application['status'], _contact: result.applicant_contact } : a))
       )
+      if (status === 'approved') {
+        const contact = result.applicant_contact
+        const info = [contact?.phone, contact?.email].filter(Boolean).join(' / ')
+        alert(`✅ 成立しました！\n連絡先: ${info || '未登録'}`)
+      } else if (status === 'rejected') {
+        alert('応募を却下しました。両者に通知が送信されました。')
+      }
     }
     setUpdating(null)
   }
@@ -152,6 +160,23 @@ export default function BusinessRequestDetailPage({ params }: { params: Promise<
                   <p className="text-xs text-gray-400 mb-2">
                     {new Date(app.created_at).toLocaleDateString('ja-JP')}
                   </p>
+
+                  {/* 成立時: 連絡先表示 */}
+                  {app.status === 'approved' && (() => {
+                    const contact = (app as Application & { _contact?: { phone?: string; email?: string } })._contact
+                    if (!contact) return null
+                    return (
+                      <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-2">
+                        <p className="text-xs font-bold text-green-700 mb-1">📞 応募者の連絡先</p>
+                        {contact.phone && (
+                          <p className="text-sm text-green-800">電話: <a href={`tel:${contact.phone}`} className="underline font-bold">{contact.phone}</a></p>
+                        )}
+                        {contact.email && (
+                          <p className="text-sm text-green-800">メール: <a href={`mailto:${contact.email}`} className="underline font-bold">{contact.email}</a></p>
+                        )}
+                      </div>
+                    )
+                  })()}
 
                   {app.status === 'pending' && (
                     <div className="flex gap-2">

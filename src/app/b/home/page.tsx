@@ -28,6 +28,7 @@ interface OfferItem {
     bio: string | null
   }
   request?: { title: string; type: string }
+  applicant_contact?: { display_name: string; phone: string | null; email: string | null }
 }
 
 export default function BusinessHomePage() {
@@ -94,19 +95,31 @@ export default function BusinessHomePage() {
 
   async function handleApplicationAction(appId: string, status: 'approved' | 'rejected') {
     try {
-      await fetch('/api/applications', {
+      const res = await fetch('/api/applications', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: appId, status }),
       })
-      // 状態をローカルで更新
-      setApplications(prev => prev.map(a => a.id === appId ? { ...a, status } : a))
+      const result = await res.json()
+
+      // 状態をローカルで更新（成立時は連絡先も含める）
+      setApplications(prev => prev.map(a => a.id === appId ? {
+        ...a,
+        status,
+        applicant_contact: result.applicant_contact || undefined,
+      } : a))
       // 統計も更新
       setStats(prev => ({
         ...prev,
         pending: prev.pending - 1,
         matched: status === 'approved' ? prev.matched + 1 : prev.matched,
       }))
+
+      if (status === 'approved') {
+        alert('✅ 成立しました！応募者の連絡先が表示されます。')
+      } else {
+        alert('応募を却下しました。両者に通知が送信されました。')
+      }
     } catch (e) {
       console.error('action error:', e)
     }
@@ -253,6 +266,26 @@ export default function BusinessHomePage() {
                       <p className="text-sm text-gray-600 bg-blue-50 rounded-lg px-3 py-2 mb-3">
                         💬 {app.message}
                       </p>
+                    )}
+
+                    {/* 成立時: 連絡先表示 */}
+                    {app.status === 'approved' && app.applicant_contact && (
+                      <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-2">
+                        <p className="text-xs font-bold text-green-700 mb-1">📞 応募者の連絡先</p>
+                        {(app.applicant_contact as { phone?: string; email?: string }).phone && (
+                          <p className="text-sm text-green-800">
+                            電話: <a href={`tel:${(app.applicant_contact as { phone: string }).phone}`} className="underline font-bold">{(app.applicant_contact as { phone: string }).phone}</a>
+                          </p>
+                        )}
+                        {(app.applicant_contact as { phone?: string; email?: string }).email && (
+                          <p className="text-sm text-green-800">
+                            メール: <a href={`mailto:${(app.applicant_contact as { email: string }).email}`} className="underline font-bold">{(app.applicant_contact as { email: string }).email}</a>
+                          </p>
+                        )}
+                        {!(app.applicant_contact as { phone?: string; email?: string }).phone && !(app.applicant_contact as { phone?: string; email?: string }).email && (
+                          <p className="text-xs text-green-600">連絡先が未登録です</p>
+                        )}
+                      </div>
                     )}
 
                     {/* アクションボタン（未対応のみ） */}
