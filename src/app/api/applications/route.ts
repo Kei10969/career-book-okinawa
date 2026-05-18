@@ -59,7 +59,6 @@ export async function PATCH(req: NextRequest) {
         title: '応募が成立しました！',
         message: `「${request.title}」への応募が承認されました。企業からの連絡をお待ちください。`,
         link: `/u/mypage`,
-        related_id: id,
       })
 
       // 企業に通知（連絡先付き）
@@ -70,11 +69,10 @@ export async function PATCH(req: NextRequest) {
 
       await supabase.from('notifications').insert({
         user_id: request.user_id,
-        type: 'match',
+        type: 'application_approved',
         title: '応募が成立しました！',
         message: `「${request.title}」への応募者（${applicant.display_name}）と成立しました。${contactInfo ? `連絡先: ${contactInfo}` : '連絡先が未登録です。'}`,
         link: `/b/requests/${request.id}`,
-        related_id: id,
       })
 
       // レスポンスに連絡先を含める
@@ -96,7 +94,6 @@ export async function PATCH(req: NextRequest) {
         title: '応募結果のお知らせ',
         message: `「${request.title}」への応募は、今回は見送りとなりました。`,
         link: `/u/mypage`,
-        related_id: id,
       })
 
       // 企業に通知
@@ -106,7 +103,6 @@ export async function PATCH(req: NextRequest) {
         title: '応募を却下しました',
         message: `「${request.title}」への応募者（${applicant.display_name}）を却下しました。`,
         link: `/b/requests/${request.id}`,
-        related_id: id,
       })
     }
   }
