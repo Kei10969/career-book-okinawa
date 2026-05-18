@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [liffReady, setLiffReady] = useState(false)
   const [alreadyLoggedIn, setAlreadyLoggedIn] = useState(false)
   const [lineProfile, setLineProfile] = useState<{ userId: string; displayName: string; pictureUrl: string | null } | null>(null)
+  const [showTerms, setShowTerms] = useState(false)
+  const [termsTab, setTermsTab] = useState<'terms' | 'privacy' | 'law'>('terms')
 
   useEffect(() => {
     checkExistingLogin()
@@ -280,7 +282,201 @@ export default function LoginPage() {
         {!alreadyLoggedIn && (
           <p className="text-white/50 text-xs text-center mt-3">LINEアカウントで簡単ログイン</p>
         )}
+
+        <button
+          onClick={() => { setShowTerms(true); setTermsTab('terms') }}
+          className="text-white/40 text-xs text-center mt-4 underline underline-offset-2"
+        >
+          利用規約・プライバシーポリシー
+        </button>
       </div>
+
+      {/* 利用規約モーダル */}
+      {showTerms && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setShowTerms(false)} />
+          <div className="relative bg-white w-full max-w-lg max-h-[85vh] rounded-t-3xl sm:rounded-3xl flex flex-col">
+            {/* ヘッダー */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <h2 className="font-black text-base text-gray-900">利用規約</h2>
+              <button onClick={() => setShowTerms(false)} className="text-gray-400 text-xl font-bold">✕</button>
+            </div>
+
+            {/* タブ */}
+            <div className="flex border-b border-gray-100">
+              {([
+                { key: 'terms', label: '利用規約' },
+                { key: 'privacy', label: 'プライバシー' },
+                { key: 'law', label: '特商法表記' },
+              ] as const).map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setTermsTab(tab.key)}
+                  className={`flex-1 py-2.5 text-xs font-bold transition-all ${
+                    termsTab === tab.key
+                      ? 'text-blue-600 border-b-2 border-blue-600'
+                      : 'text-gray-400'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* コンテンツ */}
+            <div className="overflow-y-auto px-5 py-4 text-sm text-gray-700 leading-relaxed flex-1">
+              {termsTab === 'terms' && (
+                <div className="space-y-4">
+                  <h3 className="font-bold text-gray-900">リンク沖縄 利用規約</h3>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">第1条（目的）</h4>
+                    <p>本規約は、リンク沖縄株式会社（以下「当社」といいます。）が提供する「リンク沖縄」「匿名キャリアブック沖縄」その他関連サービス（以下「本サービス」といいます。）の利用条件を定めるものです。</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">第2条（サービス内容）</h4>
+                    <p>本サービスは、利用者が匿名プロフィール、業務情報、事業情報、募集情報等を登録・掲載し、利用者間で閲覧・連絡・情報交換を行うための情報プラットフォームサービスです。</p>
+                    <p className="mt-1">当社は、システム提供者として本サービスを運営します。</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">第3条（非仲介・非保証）</h4>
+                    <p>当社は、利用者間の雇用契約、業務委託契約、請負契約、協力会社契約その他一切の契約について、仲介、斡旋、代理、保証、勧誘を行うものではありません。</p>
+                    <p className="mt-1">また、当社は職業紹介事業を行うものではありません。</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">第4条（利用者間の責任）</h4>
+                    <p>利用者間で行われる連絡、契約、商談、採用、業務委託、請負、応援依頼等は、利用者自身の責任と判断において行うものとします。</p>
+                    <p className="mt-1">当社は、利用者間の取引、契約、トラブルについて一切責任を負いません。</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">第5条（登録情報）</h4>
+                    <p>利用者は、真実かつ正確な情報を登録するものとします。</p>
+                    <p className="mt-1">当社は、本人確認、事業確認、電話確認その他必要と判断する確認を行う場合があります。</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">第6条（禁止事項）</h4>
+                    <p>利用者は以下を行ってはなりません。</p>
+                    <ul className="list-disc list-inside mt-1 space-y-0.5 text-gray-600">
+                      <li>虚偽登録</li>
+                      <li>なりすまし</li>
+                      <li>違法求人</li>
+                      <li>労働基準法違反行為</li>
+                      <li>建設業法違反行為</li>
+                      <li>名義貸し</li>
+                      <li>暴力団関係利用</li>
+                      <li>誹謗中傷</li>
+                      <li>無断転載</li>
+                      <li>個人情報の不正取得</li>
+                      <li>当社システムへの不正アクセス</li>
+                      <li>その他当社が不適切と判断する行為</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">第7条（サービス内容変更）</h4>
+                    <p>当社は、利用者への事前通知なく、本サービス内容を変更・停止できるものとします。</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">第8条（免責）</h4>
+                    <p>当社は、本サービスの完全性、有用性、正確性、継続性を保証するものではありません。</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">第9条（退会）</h4>
+                    <p>利用者は、当社所定の方法により退会できます。</p>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">第10条（規約変更）</h4>
+                    <p>当社は必要に応じて本規約を変更できます。</p>
+                  </div>
+                </div>
+              )}
+
+              {termsTab === 'privacy' && (
+                <div className="space-y-4">
+                  <h3 className="font-bold text-gray-900">プライバシーポリシー</h3>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">収集する情報</h4>
+                    <ul className="list-disc list-inside space-y-0.5 text-gray-600">
+                      <li>ニックネーム</li>
+                      <li>LINE情報</li>
+                      <li>メールアドレス</li>
+                      <li>電話番号</li>
+                      <li>職種</li>
+                      <li>資格</li>
+                      <li>エリア</li>
+                      <li>本人確認情報</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">利用目的</h4>
+                    <ul className="list-disc list-inside space-y-0.5 text-gray-600">
+                      <li>サービス提供</li>
+                      <li>オファー通知</li>
+                      <li>本人確認</li>
+                      <li>不正防止</li>
+                      <li>サポート対応</li>
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h4 className="font-bold text-gray-800 mb-1">第三者提供</h4>
+                    <p>本人の同意なく第三者へ個人情報を提供することはありません。</p>
+                  </div>
+                </div>
+              )}
+
+              {termsTab === 'law' && (
+                <div className="space-y-4">
+                  <h3 className="font-bold text-gray-900">特定商取引法に基づく表記</h3>
+
+                  <table className="w-full text-sm">
+                    <tbody className="divide-y divide-gray-100">
+                      {[
+                        ['事業者名', 'リンク沖縄株式会社'],
+                        ['代表責任者', '平良 太弥'],
+                        ['所在地', '那覇市字仲井真243-7\nココシェルジュ103'],
+                        ['電話番号', '080-9249-0884'],
+                        ['メールアドレス', 'taira.takuya.014@icloud.com'],
+                        ['サービス内容', '匿名プロフィール掲載サービス\nオファー送信機能\n建設応援リクエスト機能'],
+                        ['利用料金', '各プランページに記載'],
+                        ['支払方法', 'クレジットカード決済（仮）'],
+                        ['支払時期', '申込時または契約更新時'],
+                        ['解約について', '利用者はいつでも解約できます。'],
+                        ['返金について', 'サービスの性質上、決済後の返金は原則行いません。'],
+                      ].map(([label, value]) => (
+                        <tr key={label}>
+                          <td className="py-2 pr-3 font-bold text-gray-800 align-top whitespace-nowrap">{label}</td>
+                          <td className="py-2 text-gray-600 whitespace-pre-line">{value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* フッター */}
+            <div className="px-5 py-4 border-t border-gray-100">
+              <button
+                onClick={() => setShowTerms(false)}
+                className="w-full bg-gray-900 text-white font-bold text-sm py-3 rounded-xl"
+              >
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
