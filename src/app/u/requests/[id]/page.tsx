@@ -107,27 +107,27 @@ export default function UserRequestDetailPage({ params }: { params: Promise<{ id
 
         {/* 詳細情報 */}
         <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-400">📍</span>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-gray-400 text-xs w-16 shrink-0">エリア</span>
             <span className="font-bold">{request.area}</span>
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-400">🔧</span>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-gray-400 text-xs w-16 shrink-0">職種</span>
             <span className="font-bold">{request.trade}</span>
           </div>
-          <div className="flex items-center gap-2 text-sm">
-            <span className="text-gray-400">📅</span>
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-gray-400 text-xs w-16 shrink-0">期間</span>
             <span className="font-bold">{request.period_start} 〜 {request.period_end}</span>
           </div>
           {request.daily_rate && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-400">💰</span>
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-gray-400 text-xs w-16 shrink-0">日当</span>
               <span className="font-bold text-blue-600">{request.daily_rate.toLocaleString()}円/日</span>
             </div>
           )}
           {request.headcount && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="text-gray-400">👥</span>
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-gray-400 text-xs w-16 shrink-0">募集人数</span>
               <span className="font-bold">{request.headcount}名</span>
             </div>
           )}
