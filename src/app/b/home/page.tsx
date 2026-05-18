@@ -15,7 +15,18 @@ interface OfferItem {
   message: string
   status: string
   created_at: string
-  applicant?: { display_name: string; avatar_url: string | null }
+  applicant?: {
+    id: string
+    display_name: string
+    avatar_url: string | null
+    skills: string[]
+    areas: string[]
+    qualifications: string[]
+    experience_years: string | null
+    desired_salary: string | null
+    job_status: string | null
+    bio: string | null
+  }
   request?: { title: string; type: string }
 }
 
@@ -200,6 +211,40 @@ export default function BusinessHomePage() {
                           {app.request.type === 'support' ? '👷 ' : '🏢 '}
                           {app.request.title}
                         </p>
+                      </div>
+                    )}
+
+                    {/* 職人プロフィール */}
+                    {app.applicant && (
+                      <div className="bg-gray-50 rounded-lg px-3 py-2 mb-2 space-y-1">
+                        <p className="text-[11px] text-gray-400 mb-1">職人プロフィール</p>
+                        {app.applicant.skills && app.applicant.skills.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {app.applicant.skills.map((s: string) => (
+                              <span key={s} className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{s}</span>
+                            ))}
+                          </div>
+                        )}
+                        {app.applicant.qualifications && app.applicant.qualifications.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {app.applicant.qualifications.map((q: string) => (
+                              <span key={q} className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{q}</span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                          {app.applicant.experience_years && <span>📅 {app.applicant.experience_years}</span>}
+                          {app.applicant.desired_salary && <span>💰 {app.applicant.desired_salary}</span>}
+                          {app.applicant.job_status && (
+                            <span>{app.applicant.job_status === 'immediate' ? '🔥 今すぐ転職希望' : app.applicant.job_status === 'considering' ? '🤔 良い案件があれば' : ''}</span>
+                          )}
+                        </div>
+                        {app.applicant.areas && app.applicant.areas.length > 0 && (
+                          <p className="text-xs text-gray-500">📍 {app.applicant.areas.join(', ')}</p>
+                        )}
+                        {app.applicant.bio && (
+                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">💬 {app.applicant.bio}</p>
+                        )}
                       </div>
                     )}
 

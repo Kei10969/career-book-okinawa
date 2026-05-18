@@ -115,9 +115,38 @@ export default function BusinessRequestDetailPage({ params }: { params: Promise<
                     </span>
                     <StatusBadge status={app.status} />
                   </div>
+                  {/* 職人プロフィール */}
+                  {app.applicant && (() => {
+                    const a = app.applicant as { skills?: string[]; qualifications?: string[]; experience_years?: string; desired_salary?: string; bio?: string }
+                    return (
+                      <div className="bg-gray-50 rounded-xl p-3 mb-2 space-y-1">
+                        {a.skills && a.skills.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {a.skills.map((s) => (
+                              <span key={s} className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{s}</span>
+                            ))}
+                          </div>
+                        )}
+                        {a.qualifications && a.qualifications.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {a.qualifications.map((q) => (
+                              <span key={q} className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{q}</span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                          {a.experience_years && <span>📅 {a.experience_years}</span>}
+                          {a.desired_salary && <span>💰 {a.desired_salary}</span>}
+                        </div>
+                        {a.bio && (
+                          <p className="text-xs text-gray-500 line-clamp-2">💬 {a.bio}</p>
+                        )}
+                      </div>
+                    )
+                  })()}
                   {app.message && (
                     <p className="text-xs text-gray-600 mb-3 bg-gray-50 rounded-xl p-3">
-                      {app.message}
+                      応募メッセージ: {app.message}
                     </p>
                   )}
                   <p className="text-xs text-gray-400 mb-2">
