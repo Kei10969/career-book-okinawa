@@ -31,10 +31,23 @@ interface OfferItem {
   applicant_contact?: { display_name: string; phone: string | null; email: string | null }
 }
 
+interface WorkerOffer {
+  id: string
+  from_user_id: string
+  area: string
+  trade: string
+  condition: string | null
+  message: string
+  status: string
+  created_at: string
+  user?: { display_name: string; avatar_url: string | null }
+}
+
 export default function BusinessHomePage() {
   const [requests, setRequests] = useState<Request[]>([])
   const [allRequests, setAllRequests] = useState<Request[]>([])
   const [applications, setApplications] = useState<OfferItem[]>([])
+  const [workerOffers, setWorkerOffers] = useState<WorkerOffer[]>([])
   const [loading, setLoading] = useState(true)
   const [companyName, setCompanyName] = useState('')
   const [stats, setStats] = useState({ posts: 0, applications: 0, pending: 0, matched: 0 })
@@ -87,6 +100,11 @@ export default function BusinessHomePage() {
       const allReqRes = await fetch('/api/requests')
       const allReqData = await allReqRes.json()
       setAllRequests(Array.isArray(allReqData) ? allReqData : [])
+
+      // 職人のオファー一覧を取得
+      const offersRes = await fetch('/api/offers')
+      const offersData = await offersRes.json()
+      setWorkerOffers(Array.isArray(offersData) ? offersData : [])
     } catch (e) {
       console.error('fetchData error:', e)
     }
@@ -310,6 +328,36 @@ export default function BusinessHomePage() {
               </div>
             )}
           </div>
+
+          {/* 職人のオファー一覧 */}
+          {workerOffers.length > 0 && (
+            <div>
+              <h2 className="font-bold text-sm text-gray-500 mb-3">💼 職人からのオファー</h2>
+              <div className="space-y-2">
+                {workerOffers.map((offer) => (
+                  <div key={offer.id} className="bg-white rounded-2xl shadow-sm p-4 border border-gray-100">
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm">👤</div>
+                      <div>
+                        <p className="font-bold text-sm text-gray-800">{offer.user?.display_name || '匿名職人'}</p>
+                        <p className="text-[10px] text-gray-400">{new Date(offer.created_at).toLocaleDateString('ja-JP')}</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{offer.trade}</span>
+                      <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-full">📍 {offer.area}</span>
+                    </div>
+                    {offer.condition && (
+                      <p className="text-xs text-gray-600 bg-orange-50 rounded-lg px-3 py-2 mb-2 whitespace-pre-wrap">
+                        📋 {offer.condition}
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-700 whitespace-pre-wrap">{offer.message}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* 自分の投稿一覧 */}
           <div>

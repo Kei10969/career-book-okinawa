@@ -92,12 +92,12 @@ export default function UserOfferPage() {
 
         <div>
           <label className={labelClass}>条件・希望（期間・単価・人数など）</label>
-          <input
-            type="text"
+          <textarea
             value={form.condition}
             onChange={(e) => updateForm('condition', e.target.value)}
-            placeholder="例: 日当15,000円以上希望、来月から3ヶ月"
-            className={inputClass}
+            placeholder="例: 日当15,000円以上希望、来月から3ヶ月、週5日勤務可能"
+            rows={3}
+            className={`${inputClass} resize-none`}
           />
         </div>
 
