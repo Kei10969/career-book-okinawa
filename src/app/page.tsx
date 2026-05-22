@@ -99,6 +99,15 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(`登録エラー: ${res.status}`)
 
       const user = await res.json()
+
+      // 利用停止チェック
+      if (user.is_suspended) {
+        setError('アカウントが利用停止中です。お問い合わせください。')
+        setIsLoading(false)
+        setIsCheckingAuth(false)
+        return
+      }
+
       saveUserToLocalStorage(user, profile.displayName)
       redirectAfterLogin(user)
     } catch (e: unknown) {

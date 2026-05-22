@@ -15,6 +15,18 @@ interface WorkerProfile {
   job_status: string | null
   bio: string | null
   profile_completed: boolean
+  late_cancel_count?: number
+  no_show_count?: number
+}
+
+interface ReviewInfo {
+  avg: number
+  total: number
+}
+
+interface AvailabilityInfo {
+  date_from: string
+  date_to: string
 }
 
 const JOB_STATUS_BADGE: Record<string, string> = {
@@ -30,11 +42,15 @@ export default function BusinessSearchPage() {
   const [tradeFilter, setTradeFilter] = useState('all')
   const [areaFilter, setAreaFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [dateFilter, setDateFilter] = useState('')
+  const [reviewMap, setReviewMap] = useState<Record<string, ReviewInfo>>({})
+  const [availMap, setAvailMap] = useState<Record<string, AvailabilityInfo[]>>({})
+  const [cancelMap, setCancelMap] = useState<Record<string, { late: number; no_show: number }>>({})
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchWorkers()
-  }, [tradeFilter, areaFilter, statusFilter])
+  }, [tradeFilter, areaFilter, statusFilter, dateFilter])
 
   async function fetchWorkers() {
     setLoading(true)
@@ -46,12 +62,100 @@ export default function BusinessSearchPage() {
     try {
       const res = await fetch(`/api/workers?${params}`)
       const data = await res.json()
-      setWorkers(Array.isArray(data) ? data : [])
+      let workerList: WorkerProfile[] = Array.isArray(data) ? data : []
+
+      // 空き日フィルタ: 特定日に空いてる人のみ
+      let availableUserIds: Set<string> | null = null
+      if (dateFilter) {
+        try {
+          const avRes = await fetch(`/api/availability?date=${dateFilter}`)
+          const avData = await avRes.json()
+          if (Array.isArray(avData)) {
+            availableUserIds = new Set(avData.map((a: { user_id: string }) => a.user_id))
+          }
+        } catch { /* ignore */ }
+      }
+
+      if (availableUserIds) {
+        workerList = workerList.filter(w => availableUserIds!.has(w.id))
+      }
+
+      setWorkers(workerList)
+
+      // 各職人の評価・空き・キャンセル回数を取得
+      const reviews: Record<string, ReviewInfo> = {}
+      const avails: Record<string, AvailabilityInfo[]> = {}
+      const cancels: Record<string, { late: number; no_show: number }> = {}
+
+      for (const worker of workerList) {
+        // 評価
+        try {
+          const rRes = await fetch(`/api/reviews?reviewee_id=${worker.id}`)
+          const rData = await rRes.json()
+          if (rData.total_reviews > 0) {
+            const avg = Math.round(((rData.avg_quality + rData.avg_deadline + rData.avg_communication + rData.avg_repeat) / 4) * 10) / 10
+            reviews[worker.id] = { avg, total: rData.total_reviews }
+          }
+        } catch { /* ignore */ }
+
+        // 空き状況
+        try {
+          const aRes = await fetch(`/api/availability?user_id=${worker.id}`)
+          const aData = await aRes.json()
+          if (Array.isArray(aData) && aData.length > 0) {
+            avails[worker.id] = aData.map((a: { date_from: string; date_to: string }) => ({
+              date_from: a.date_from,
+              date_to: a.date_to,
+            }))
+          }
+        } catch { /* ignore */ }
+
+        // キャンセル回数
+        try {
+          const cRes = await fetch(`/api/users/${worker.id}`)
+          const cData = await cRes.json()
+          const late = cData.late_cancel_count || 0
+          const noShow = cData.no_show_count || 0
+          if (late > 0 || noShow > 0) {
+            cancels[worker.id] = { late, no_show: noShow }
+          }
+        } catch { /* ignore */ }
+      }
+
+      setReviewMap(reviews)
+      setAvailMap(avails)
+      setCancelMap(cancels)
     } catch (e) {
       console.error('fetchWorkers error:', e)
       setWorkers([])
     }
     setLoading(false)
+  }
+
+  function getAvailBadge(workerId: string): { label: string; style: string } | null {
+    const avails = availMap[workerId]
+    if (!avails || avails.length === 0) return null
+
+    const today = new Date()
+    const weekLater = new Date()
+    weekLater.setDate(weekLater.getDate() + 7)
+    const todayStr = today.toISOString().split('T')[0]
+    const weekStr = weekLater.toISOString().split('T')[0]
+
+    const hasThisWeek = avails.some(a => a.date_from <= weekStr && a.date_to >= todayStr)
+
+    if (hasThisWeek) {
+      return { label: '📅 今週空き', style: 'bg-green-100 text-green-700' }
+    }
+
+    // 最も近い空き
+    const nearest = avails[0]
+    const from = new Date(nearest.date_from)
+    const to = new Date(nearest.date_to)
+    return {
+      label: `📅 ${from.getMonth() + 1}/${from.getDate()}〜${to.getMonth() + 1}/${to.getDate()}`,
+      style: 'bg-blue-50 text-blue-600',
+    }
   }
 
   return (
@@ -101,6 +205,25 @@ export default function BusinessSearchPage() {
         ))}
       </div>
 
+      {/* 空いてる日で絞り込み */}
+      <div className="mb-3">
+        <label className="block text-xs font-bold text-gray-500 mb-1">📅 空いてる日で絞り込み</label>
+        <input
+          type="date"
+          value={dateFilter}
+          onChange={(e) => setDateFilter(e.target.value)}
+          className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+        />
+        {dateFilter && (
+          <button
+            onClick={() => setDateFilter('')}
+            className="mt-1 text-xs text-orange-500 font-bold"
+          >
+            日付フィルタをクリア
+          </button>
+        )}
+      </div>
+
       {/* エリアチップ横スクロール */}
       <div ref={scrollRef} className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide -mx-4 px-4">
         <button
@@ -133,59 +256,101 @@ export default function BusinessSearchPage() {
         <EmptyState icon="🔍" title="該当する人材が見つかりません" description="条件を変更して検索してみてください" />
       ) : (
         <div className="space-y-3">
-          {workers.map((worker, index) => (
-            <button
-              key={worker.id}
-              onClick={() => router.push(`/b/search/${worker.id}`)}
-              className="w-full bg-white rounded-2xl shadow-sm p-4 text-left active:bg-gray-50 transition-colors border border-gray-100"
-            >
-              <div className="flex items-start gap-3">
-                {/* 匿名アバター */}
-                <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-7 h-7 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                  </svg>
-                </div>
+          {workers.map((worker) => {
+            const review = reviewMap[worker.id]
+            const availBadge = getAvailBadge(worker.id)
+            const cancel = cancelMap[worker.id]
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="font-black text-sm text-gray-900">
-                      {worker.skills?.[0] || '職種未設定'}
-                    </p>
-                    {worker.job_status && (
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${JOB_STATUS_BADGE[worker.job_status] || 'bg-gray-100 text-gray-500'}`}>
-                        {JOB_STATUS_LABEL[worker.job_status] || worker.job_status}
-                      </span>
-                    )}
+            return (
+              <button
+                key={worker.id}
+                onClick={() => router.push(`/b/search/${worker.id}`)}
+                className="w-full bg-white rounded-2xl shadow-sm p-4 text-left active:bg-gray-50 transition-colors border border-gray-100"
+              >
+                <div className="flex items-start gap-3">
+                  {/* 匿名アバター */}
+                  <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-7 h-7 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
                   </div>
 
-                  {/* 経験年数 */}
-                  {worker.experience_years && (
-                    <p className="text-xs text-gray-500 mb-1">🔧 経験 {worker.experience_years}</p>
-                  )}
-
-                  {/* エリア */}
-                  {worker.areas && worker.areas.length > 0 && (
-                    <p className="text-xs text-gray-500 mb-2">📍 {worker.areas.join(' / ')}</p>
-                  )}
-
-                  {/* 資格タグ */}
-                  {worker.qualifications && worker.qualifications.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {worker.qualifications.slice(0, 3).map((qual) => (
-                        <span key={qual} className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                          {qual}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-black text-sm text-gray-900">
+                        {worker.skills?.[0] || '職種未設定'}
+                      </p>
+                      {worker.job_status && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${JOB_STATUS_BADGE[worker.job_status] || 'bg-gray-100 text-gray-500'}`}>
+                          {JOB_STATUS_LABEL[worker.job_status] || worker.job_status}
                         </span>
-                      ))}
-                      {worker.qualifications.length > 3 && (
-                        <span className="text-[10px] text-gray-400 font-bold">+{worker.qualifications.length - 3}</span>
                       )}
                     </div>
-                  )}
+
+                    {/* 評価バッジ */}
+                    <div className="flex flex-wrap gap-1 mb-1">
+                      {review ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700">
+                          ⭐ {review.avg} ({review.total}件)
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-50 text-gray-400">
+                          評価なし
+                        </span>
+                      )}
+
+                      {/* 空きバッジ */}
+                      {availBadge && (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${availBadge.style}`}>
+                          {availBadge.label}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* キャンセル回数バッジ */}
+                    {cancel && (
+                      <div className="flex gap-1 mb-1">
+                        {cancel.late > 0 && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700">
+                            ⚠️ 当日キャンセル{cancel.late}回
+                          </span>
+                        )}
+                        {cancel.no_show > 0 && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                            ⚠️ 無断{cancel.no_show}回
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 経験年数 */}
+                    {worker.experience_years && (
+                      <p className="text-xs text-gray-500 mb-1">🔧 経験 {worker.experience_years}</p>
+                    )}
+
+                    {/* エリア */}
+                    {worker.areas && worker.areas.length > 0 && (
+                      <p className="text-xs text-gray-500 mb-2">📍 {worker.areas.join(' / ')}</p>
+                    )}
+
+                    {/* 資格タグ */}
+                    {worker.qualifications && worker.qualifications.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {worker.qualifications.slice(0, 3).map((qual) => (
+                          <span key={qual} className="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                            {qual}
+                          </span>
+                        ))}
+                        {worker.qualifications.length > 3 && (
+                          <span className="text-[10px] text-gray-400 font-bold">+{worker.qualifications.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            )
+          })}
         </div>
       )}
     </AppShell>

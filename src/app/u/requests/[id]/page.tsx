@@ -15,6 +15,8 @@ export default function UserRequestDetailPage({ params }: { params: Promise<{ id
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [applied, setApplied] = useState(false)
+  const [myApplication, setMyApplication] = useState<{ id: string; status: string } | null>(null)
+  const [cancelCounts, setCancelCounts] = useState({ late: 0, no_show: 0 })
 
   useEffect(() => {
     fetchRequest()
@@ -34,7 +36,18 @@ export default function UserRequestDetailPage({ params }: { params: Promise<{ id
     const data = await res.json()
     if (Array.isArray(data) && data.length > 0) {
       setApplied(true)
+      setMyApplication(data[0])
     }
+
+    // 自分のキャンセル回数を取得
+    try {
+      const uRes = await fetch(`/api/users/${userId}`)
+      const uData = await uRes.json()
+      setCancelCounts({
+        late: uData.late_cancel_count || 0,
+        no_show: uData.no_show_count || 0,
+      })
+    } catch { /* ignore */ }
   }
 
   async function handleApply() {
@@ -55,10 +68,53 @@ export default function UserRequestDetailPage({ params }: { params: Promise<{ id
     if (res.ok) {
       setApplied(true)
       setMessage('')
+      const data = await res.json()
+      setMyApplication(data)
     } else {
       alert('応募に失敗しました')
     }
     setSubmitting(false)
+  }
+
+  async function handleCancel() {
+    if (!myApplication || !request) return
+
+    const userId = getCurrentUserId()
+    const now = new Date()
+    // period_startの前日18時(JST)を計算
+    const periodStart = new Date(request.period_start + 'T00:00:00+09:00')
+    const deadline = new Date(periodStart)
+    deadline.setDate(deadline.getDate() - 1)
+    deadline.setHours(18, 0, 0, 0)
+
+    const isLate = now >= deadline
+    let cancelType: 'normal' | 'late' = 'normal'
+
+    if (isLate) {
+      cancelType = 'late'
+      const confirmMsg = `⚠️ このキャンセルはペナルティ対象になります。現在の警告回数: ${cancelCounts.late}回/3回。本当にキャンセルしますか？`
+      if (!confirm(confirmMsg)) return
+    } else {
+      if (!confirm('この応募をキャンセルしますか？')) return
+    }
+
+    const res = await fetch('/api/cancellations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        application_id: myApplication.id,
+        cancelled_by: userId,
+        cancel_type: cancelType,
+        reason: null,
+      }),
+    })
+
+    if (res.ok) {
+      alert('キャンセルしました')
+      setMyApplication({ ...myApplication, status: 'cancelled' })
+    } else {
+      alert('キャンセルに失敗しました')
+    }
   }
 
   if (loading) {
@@ -141,10 +197,30 @@ export default function UserRequestDetailPage({ params }: { params: Promise<{ id
           </p>
         </div>
 
-        {/* 応募フォーム */}
+        {/* 応募フォーム / ステータス表示 */}
         {applied ? (
-          <div className="bg-green-50 rounded-2xl p-4 text-center">
-            <span className="text-green-600 font-bold">✅ 応募済み</span>
+          <div className="space-y-2">
+            {myApplication?.status === 'cancelled' ? (
+              <div className="bg-gray-50 rounded-2xl p-4 text-center">
+                <span className="text-gray-500 font-bold">キャンセル済み</span>
+              </div>
+            ) : myApplication?.status === 'approved' ? (
+              <>
+                <div className="bg-green-50 rounded-2xl p-4 text-center">
+                  <span className="text-green-600 font-bold">✅ 成立済み</span>
+                </div>
+                <button
+                  onClick={handleCancel}
+                  className="w-full bg-red-100 text-red-600 font-bold text-sm py-3 rounded-2xl active:scale-[0.98] transition-all"
+                >
+                  キャンセルする
+                </button>
+              </>
+            ) : (
+              <div className="bg-green-50 rounded-2xl p-4 text-center">
+                <span className="text-green-600 font-bold">✅ 応募済み</span>
+              </div>
+            )}
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">

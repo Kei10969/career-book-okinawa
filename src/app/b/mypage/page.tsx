@@ -7,13 +7,18 @@ import EmptyState from '@/components/EmptyState'
 import { getCurrentUserId } from '@/lib/auth'
 import { logoutFromLine } from '@/lib/liff'
 import { OKINAWA_CITIES } from '@/lib/constants'
-import type { BusinessProfile, Request } from '@/types/database'
+import type { BusinessProfile, Request, Availability } from '@/types/database'
 
 export default function BusinessMyPage() {
   const [profile, setProfile] = useState<BusinessProfile | null>(null)
   const [requests, setRequests] = useState<Request[]>([])
+  const [availabilities, setAvailabilities] = useState<Availability[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
+  const [avDateFrom, setAvDateFrom] = useState('')
+  const [avDateTo, setAvDateTo] = useState('')
+  const [avNote, setAvNote] = useState('')
+  const [avSubmitting, setAvSubmitting] = useState(false)
   const [form, setForm] = useState({
     company_name: '',
     contact_name: '',
@@ -28,9 +33,10 @@ export default function BusinessMyPage() {
 
   async function fetchData() {
     const userId = getCurrentUserId()
-    const [profileRes, reqRes] = await Promise.all([
+    const [profileRes, reqRes, avRes] = await Promise.all([
       fetch(`/api/business-profiles?user_id=${userId}`),
       fetch(`/api/requests?user_id=${userId}`),
+      fetch(`/api/availability?user_id=${userId}`),
     ])
 
     const profileData = await profileRes.json()
@@ -49,6 +55,8 @@ export default function BusinessMyPage() {
       setEditing(true) // 初回は編集モード
     }
     setRequests(reqData)
+    const avData = await avRes.json()
+    setAvailabilities(Array.isArray(avData) ? avData : [])
     setLoading(false)
   }
 
@@ -87,6 +95,44 @@ export default function BusinessMyPage() {
     const res = await fetch(`/api/requests/${requestId}?user_id=${userId}`, { method: 'DELETE' })
     if (res.ok) {
       setRequests((prev) => prev.filter((r) => r.id !== requestId))
+    } else {
+      alert('削除に失敗しました')
+    }
+  }
+
+  async function addAvailability() {
+    if (!avDateFrom || !avDateTo) {
+      alert('開始日と終了日を入力してください')
+      return
+    }
+    if (avDateFrom > avDateTo) {
+      alert('終了日は開始日以降にしてください')
+      return
+    }
+    setAvSubmitting(true)
+    const userId = getCurrentUserId()
+    const res = await fetch('/api/availability', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId, date_from: avDateFrom, date_to: avDateTo, note: avNote || null }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setAvailabilities(prev => [...prev, data])
+      setAvDateFrom('')
+      setAvDateTo('')
+      setAvNote('')
+    } else {
+      alert('登録に失敗しました')
+    }
+    setAvSubmitting(false)
+  }
+
+  async function deleteAvailability(avId: string) {
+    if (!confirm('この空き情報を削除しますか？')) return
+    const res = await fetch(`/api/availability?id=${avId}`, { method: 'DELETE' })
+    if (res.ok) {
+      setAvailabilities(prev => prev.filter(a => a.id !== avId))
     } else {
       alert('削除に失敗しました')
     }
@@ -231,6 +277,70 @@ export default function BusinessMyPage() {
                   </button>
                 </div>
               ))
+            )}
+          </div>
+
+          {/* 空き状況管理 */}
+          <div>
+            <h2 className="font-bold text-sm text-gray-500 mb-2">📅 空き状況管理</h2>
+            <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3 mb-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">開始日</label>
+                  <input
+                    type="date"
+                    value={avDateFrom}
+                    onChange={(e) => setAvDateFrom(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">終了日</label>
+                  <input
+                    type="date"
+                    value={avDateTo}
+                    onChange={(e) => setAvDateTo(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+              <input
+                type="text"
+                value={avNote}
+                onChange={(e) => setAvNote(e.target.value)}
+                placeholder="メモ（任意）"
+                className={inputClass}
+              />
+              <button
+                onClick={addAvailability}
+                disabled={avSubmitting}
+                className="w-full bg-orange-500 text-white font-bold text-sm py-2.5 rounded-xl disabled:opacity-50"
+              >
+                {avSubmitting ? '登録中...' : '登録する'}
+              </button>
+            </div>
+
+            {availabilities.length === 0 ? (
+              <EmptyState icon="📅" title="空き情報はありません" />
+            ) : (
+              <div className="space-y-2">
+                {availabilities.map((av) => (
+                  <div key={av.id} className="bg-white rounded-2xl shadow-sm p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">
+                        {av.date_from} 〜 {av.date_to}
+                      </p>
+                      {av.note && <p className="text-xs text-gray-500 mt-0.5">{av.note}</p>}
+                    </div>
+                    <button
+                      onClick={() => deleteAvailability(av.id)}
+                      className="text-red-400 hover:text-red-600 text-xs font-bold transition-colors"
+                    >
+                      削除
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 

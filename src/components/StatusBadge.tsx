@@ -11,6 +11,7 @@ const statusConfig: Record<string, { label: string; style: string }> = {
   reviewing: { label: '審査中', style: 'bg-yellow-100 text-yellow-700' },
   matched: { label: '成立', style: 'bg-green-100 text-green-700' },
   closed: { label: '終了', style: 'bg-gray-100 text-gray-500' },
+  cancelled: { label: 'キャンセル', style: 'bg-gray-200 text-gray-600' },
 }
 
 export default function StatusBadge({ status, className = '' }: StatusBadgeProps) {

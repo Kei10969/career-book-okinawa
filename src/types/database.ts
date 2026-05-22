@@ -130,6 +130,53 @@ export interface Notification {
   created_at: string
 }
 
+export type CancelType = 'normal' | 'late' | 'no_show'
+
+export interface Cancellation {
+  id: string
+  application_id: string
+  cancelled_by: string
+  cancel_type: CancelType
+  reason: string | null
+  is_revoked: boolean
+  revoked_at: string | null
+  created_at: string
+}
+
+export type ReviewType = 'business_to_business' | 'business_to_worker'
+
+export interface Review {
+  id: string
+  application_id: string
+  reviewer_id: string
+  reviewee_id: string
+  review_type: ReviewType
+  quality_rating: number
+  deadline_rating: number
+  communication_rating: number
+  repeat_rating: number
+  comment: string | null
+  created_at: string
+}
+
+export interface ReviewSummary {
+  avg_quality: number
+  avg_deadline: number
+  avg_communication: number
+  avg_repeat: number
+  total_reviews: number
+}
+
+export interface Availability {
+  id: string
+  user_id: string
+  date_from: string
+  date_to: string
+  note: string | null
+  created_at: string
+  updated_at: string
+}
+
 export type Database = {
   public: {
     Tables: {

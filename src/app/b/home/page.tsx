@@ -44,17 +44,36 @@ interface WorkerOffer {
   user?: { display_name: string; avatar_url: string | null }
 }
 
+interface AvailableWorker {
+  user_id: string
+  date_from: string
+  date_to: string
+  note: string | null
+  user?: {
+    id: string
+    skills: string[]
+    areas: string[]
+  }
+}
+
+interface ReviewSummaryMap {
+  [userId: string]: { avg: number; total: number }
+}
+
 export default function BusinessHomePage() {
   const router = useRouter()
   const [requests, setRequests] = useState<Request[]>([])
   const [allRequests, setAllRequests] = useState<Request[]>([])
   const [applications, setApplications] = useState<OfferItem[]>([])
   const [workerOffers, setWorkerOffers] = useState<WorkerOffer[]>([])
+  const [availableWorkers, setAvailableWorkers] = useState<AvailableWorker[]>([])
   const [loading, setLoading] = useState(true)
   const [companyName, setCompanyName] = useState('')
   const [stats, setStats] = useState({ posts: 0, applications: 0, pending: 0, matched: 0 })
   const [appFilter, setAppFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all')
   const [reqTab, setReqTab] = useState<'all' | 'support' | 'subcontract'>('all')
+  const [reviewedApps, setReviewedApps] = useState<Set<string>>(new Set())
+  const [reviewSummaries, setReviewSummaries] = useState<ReviewSummaryMap>({})
 
   useEffect(() => {
     const stored = localStorage.getItem('user_nickname') || localStorage.getItem('user_name') || ''
@@ -98,6 +117,34 @@ export default function BusinessHomePage() {
         pending: pendingCount,
         matched: matchedCount,
       })
+
+      // 評価済みチェック & レビューサマリー取得
+      const reviewed = new Set<string>()
+      const summaries: ReviewSummaryMap = {}
+      for (const app of allApps) {
+        if (app.status === 'approved') {
+          try {
+            const rRes = await fetch(`/api/reviews?application_id=${app.id}&reviewer_id=${userId}`)
+            const rData = await rRes.json()
+            if (rData.exists) reviewed.add(app.id)
+          } catch { /* ignore */ }
+        }
+        // 応募者の評価サマリーを取得
+        const applicantId = app.applicant_id || app.applicant?.id
+        if (applicantId && !summaries[applicantId]) {
+          try {
+            const sRes = await fetch(`/api/reviews?reviewee_id=${applicantId}`)
+            const sData = await sRes.json()
+            if (sData.total_reviews > 0) {
+              const avg = Math.round(((sData.avg_quality + sData.avg_deadline + sData.avg_communication + sData.avg_repeat) / 4) * 10) / 10
+              summaries[applicantId] = { avg, total: sData.total_reviews }
+            }
+          } catch { /* ignore */ }
+        }
+      }
+      setReviewedApps(reviewed)
+      setReviewSummaries(summaries)
+
       // 全募集一覧（他社含む）を取得
       const allReqRes = await fetch('/api/requests')
       const allReqData = await allReqRes.json()
@@ -107,6 +154,44 @@ export default function BusinessHomePage() {
       const offersRes = await fetch('/api/offers')
       const offersData = await offersRes.json()
       setWorkerOffers(Array.isArray(offersData) ? offersData : [])
+
+      // 今空いてる職人を取得（今日〜7日以内）
+      try {
+        const avRes = await fetch('/api/availability')
+        const avData = await avRes.json()
+        if (Array.isArray(avData)) {
+          const today = new Date()
+          const weekLater = new Date()
+          weekLater.setDate(weekLater.getDate() + 7)
+          const todayStr = today.toISOString().split('T')[0]
+          const weekStr = weekLater.toISOString().split('T')[0]
+
+          // 今日〜7日以内に空きがある人
+          const nearAvailability = avData.filter((a: { date_from: string; date_to: string }) =>
+            a.date_from <= weekStr && a.date_to >= todayStr
+          )
+
+          // ユーザーIDで重複排除して最大5件
+          const seen = new Set<string>()
+          const unique: AvailableWorker[] = []
+          for (const av of nearAvailability) {
+            if (!seen.has(av.user_id) && unique.length < 5) {
+              seen.add(av.user_id)
+              unique.push(av)
+            }
+          }
+
+          // 各ユーザーのプロフィールを取得
+          for (const av of unique) {
+            try {
+              const uRes = await fetch(`/api/users/${av.user_id}`)
+              const uData = await uRes.json()
+              av.user = { id: uData.id, skills: uData.skills || [], areas: uData.areas || [] }
+            } catch { /* ignore */ }
+          }
+          setAvailableWorkers(unique)
+        }
+      } catch { /* ignore */ }
     } catch (e) {
       console.error('fetchData error:', e)
     }
@@ -122,13 +207,11 @@ export default function BusinessHomePage() {
       })
       const result = await res.json()
 
-      // 状態をローカルで更新（成立時は連絡先も含める）
       setApplications(prev => prev.map(a => a.id === appId ? {
         ...a,
         status,
         applicant_contact: result.applicant_contact || undefined,
       } : a))
-      // 統計も更新
       setStats(prev => ({
         ...prev,
         pending: prev.pending - 1,
@@ -173,6 +256,48 @@ export default function BusinessHomePage() {
             <SummaryCard icon="🤝" label="成立" value={stats.matched} color="text-green-600" />
           </div>
 
+          {/* 📅 今空いてる職人 */}
+          {availableWorkers.length > 0 && (
+            <div>
+              <h2 className="font-bold text-sm text-gray-500 mb-3">📅 今空いてる職人</h2>
+              <div className="space-y-2">
+                {availableWorkers.map((av) => (
+                  <div
+                    key={av.user_id}
+                    className="bg-white rounded-2xl shadow-sm p-4 border border-gray-100 cursor-pointer active:scale-[0.99] transition-all"
+                    onClick={() => router.push(`/b/search/${av.user_id}`)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                        </svg>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-gray-900">
+                          {av.user?.skills?.[0] || '職種未設定'}
+                        </p>
+                        {av.user?.areas && av.user.areas.length > 0 && (
+                          <p className="text-xs text-gray-500">📍 {av.user.areas.join(' / ')}</p>
+                        )}
+                        <p className="text-xs text-green-600 font-bold mt-1">
+                          📅 {av.date_from} 〜 {av.date_to}
+                        </p>
+                        {av.note && <p className="text-xs text-gray-400 mt-0.5">{av.note}</p>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  onClick={() => router.push('/b/search')}
+                  className="w-full text-center text-orange-500 font-bold text-sm py-2"
+                >
+                  もっと見る →
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* オファー一覧 */}
           <div>
             <h2 className="font-bold text-sm text-gray-500 mb-3 flex items-center gap-2">
@@ -214,119 +339,153 @@ export default function BusinessHomePage() {
               />
             ) : (
               <div className="space-y-2">
-                {filteredApps.map(app => (
-                  <div key={app.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
-                    {/* 応募者情報 */}
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-sm">
-                          {app.applicant?.avatar_url ? (
-                            <img src={app.applicant.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
-                          ) : '👤'}
-                        </div>
-                        <div>
-                          <p className="font-bold text-sm text-gray-800">
-                            {app.applicant?.display_name || '匿名ユーザー'}
-                          </p>
-                          <p className="text-[11px] text-gray-400">
-                            {new Date(app.created_at).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                        </div>
-                      </div>
-                      <StatusBadge status={app.status} />
-                    </div>
+                {filteredApps.map(app => {
+                  const applicantId = app.applicant_id || app.applicant?.id || ''
+                  const reviewInfo = reviewSummaries[applicantId]
 
-                    {/* 対象の投稿 */}
-                    {app.request && (
-                      <div className="bg-gray-50 rounded-lg px-3 py-2 mb-2">
-                        <p className="text-[11px] text-gray-400 mb-0.5">対象の募集</p>
-                        <p className="text-sm font-bold text-gray-700">
-                          {app.request.type === 'support' ? '👷 ' : '🏢 '}
-                          {app.request.title}
-                        </p>
+                  return (
+                    <div key={app.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                      {/* 応募者情報 */}
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-sm">
+                            {app.applicant?.avatar_url ? (
+                              <img src={app.applicant.avatar_url} alt="" className="w-full h-full rounded-full object-cover" />
+                            ) : '👤'}
+                          </div>
+                          <div>
+                            <p className="font-bold text-sm text-gray-800">
+                              {app.applicant?.display_name || '匿名ユーザー'}
+                            </p>
+                            <p className="text-[11px] text-gray-400">
+                              {new Date(app.created_at).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                        <StatusBadge status={app.status} />
                       </div>
-                    )}
 
-                    {/* 職人プロフィール */}
-                    {app.applicant && (
-                      <div className="bg-gray-50 rounded-lg px-3 py-2 mb-2 space-y-1">
-                        <p className="text-[11px] text-gray-400 mb-1">職人プロフィール</p>
-                        {app.applicant.skills && app.applicant.skills.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {app.applicant.skills.map((s: string) => (
-                              <span key={s} className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{s}</span>
-                            ))}
+                      {/* 評価バッジ */}
+                      {reviewInfo ? (
+                        <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 mb-2">
+                          ⭐ {reviewInfo.avg} ({reviewInfo.total}件)
+                        </span>
+                      ) : (
+                        <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-50 text-gray-400 mb-2">
+                          評価なし
+                        </span>
+                      )}
+
+                      {/* 対象の投稿 */}
+                      {app.request && (
+                        <div className="bg-gray-50 rounded-lg px-3 py-2 mb-2">
+                          <p className="text-[11px] text-gray-400 mb-0.5">対象の募集</p>
+                          <p className="text-sm font-bold text-gray-700">
+                            {app.request.type === 'support' ? '👷 ' : '🏢 '}
+                            {app.request.title}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* 職人プロフィール */}
+                      {app.applicant && (
+                        <div className="bg-gray-50 rounded-lg px-3 py-2 mb-2 space-y-1">
+                          <p className="text-[11px] text-gray-400 mb-1">職人プロフィール</p>
+                          {app.applicant.skills && app.applicant.skills.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {app.applicant.skills.map((s: string) => (
+                                <span key={s} className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{s}</span>
+                              ))}
+                            </div>
+                          )}
+                          {app.applicant.qualifications && app.applicant.qualifications.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {app.applicant.qualifications.map((q: string) => (
+                                <span key={q} className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{q}</span>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                            {app.applicant.experience_years && <span>📅 {app.applicant.experience_years}</span>}
+                            {app.applicant.desired_salary && <span>💰 {app.applicant.desired_salary}</span>}
+                            {app.applicant.job_status && (
+                              <span>{app.applicant.job_status === 'immediate' ? '🔥 今すぐ転職希望' : app.applicant.job_status === 'considering' ? '🤔 良い案件があれば' : ''}</span>
+                            )}
                           </div>
-                        )}
-                        {app.applicant.qualifications && app.applicant.qualifications.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {app.applicant.qualifications.map((q: string) => (
-                              <span key={q} className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{q}</span>
-                            ))}
-                          </div>
-                        )}
-                        <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                          {app.applicant.experience_years && <span>📅 {app.applicant.experience_years}</span>}
-                          {app.applicant.desired_salary && <span>💰 {app.applicant.desired_salary}</span>}
-                          {app.applicant.job_status && (
-                            <span>{app.applicant.job_status === 'immediate' ? '🔥 今すぐ転職希望' : app.applicant.job_status === 'considering' ? '🤔 良い案件があれば' : ''}</span>
+                          {app.applicant.areas && app.applicant.areas.length > 0 && (
+                            <p className="text-xs text-gray-500">📍 {app.applicant.areas.join(', ')}</p>
+                          )}
+                          {app.applicant.bio && (
+                            <p className="text-xs text-gray-500 mt-1 line-clamp-2">💬 {app.applicant.bio}</p>
                           )}
                         </div>
-                        {app.applicant.areas && app.applicant.areas.length > 0 && (
-                          <p className="text-xs text-gray-500">📍 {app.applicant.areas.join(', ')}</p>
-                        )}
-                        {app.applicant.bio && (
-                          <p className="text-xs text-gray-500 mt-1 line-clamp-2">💬 {app.applicant.bio}</p>
-                        )}
-                      </div>
-                    )}
+                      )}
 
-                    {/* メッセージ */}
-                    {app.message && (
-                      <p className="text-sm text-gray-600 bg-blue-50 rounded-lg px-3 py-2 mb-3">
-                        💬 {app.message}
-                      </p>
-                    )}
+                      {/* メッセージ */}
+                      {app.message && (
+                        <p className="text-sm text-gray-600 bg-blue-50 rounded-lg px-3 py-2 mb-3">
+                          💬 {app.message}
+                        </p>
+                      )}
 
-                    {/* 成立時: 連絡先表示 */}
-                    {app.status === 'approved' && app.applicant_contact && (
-                      <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-2">
-                        <p className="text-xs font-bold text-green-700 mb-1">📞 応募者の連絡先</p>
-                        {(app.applicant_contact as { phone?: string; email?: string }).phone && (
-                          <p className="text-sm text-green-800">
-                            電話: <a href={`tel:${(app.applicant_contact as { phone: string }).phone}`} className="underline font-bold">{(app.applicant_contact as { phone: string }).phone}</a>
-                          </p>
-                        )}
-                        {(app.applicant_contact as { phone?: string; email?: string }).email && (
-                          <p className="text-sm text-green-800">
-                            メール: <a href={`mailto:${(app.applicant_contact as { email: string }).email}`} className="underline font-bold">{(app.applicant_contact as { email: string }).email}</a>
-                          </p>
-                        )}
-                        {!(app.applicant_contact as { phone?: string; email?: string }).phone && !(app.applicant_contact as { phone?: string; email?: string }).email && (
-                          <p className="text-xs text-green-600">連絡先が未登録です</p>
-                        )}
-                      </div>
-                    )}
+                      {/* 成立時: 連絡先表示 */}
+                      {app.status === 'approved' && app.applicant_contact && (
+                        <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-2">
+                          <p className="text-xs font-bold text-green-700 mb-1">📞 応募者の連絡先</p>
+                          {(app.applicant_contact as { phone?: string; email?: string }).phone && (
+                            <p className="text-sm text-green-800">
+                              電話: <a href={`tel:${(app.applicant_contact as { phone: string }).phone}`} className="underline font-bold">{(app.applicant_contact as { phone: string }).phone}</a>
+                            </p>
+                          )}
+                          {(app.applicant_contact as { phone?: string; email?: string }).email && (
+                            <p className="text-sm text-green-800">
+                              メール: <a href={`mailto:${(app.applicant_contact as { email: string }).email}`} className="underline font-bold">{(app.applicant_contact as { email: string }).email}</a>
+                            </p>
+                          )}
+                          {!(app.applicant_contact as { phone?: string; email?: string }).phone && !(app.applicant_contact as { phone?: string; email?: string }).email && (
+                            <p className="text-xs text-green-600">連絡先が未登録です</p>
+                          )}
+                        </div>
+                      )}
 
-                    {/* アクションボタン（未対応のみ） */}
-                    {app.status === 'pending' && (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleApplicationAction(app.id, 'approved')}
-                          className="flex-1 bg-green-500 text-white text-sm font-bold py-2.5 rounded-xl active:scale-[0.98] transition-all"
-                        >
-                          ✅ 承認する
-                        </button>
-                        <button
-                          onClick={() => handleApplicationAction(app.id, 'rejected')}
-                          className="flex-1 bg-gray-200 text-gray-600 text-sm font-bold py-2.5 rounded-xl active:scale-[0.98] transition-all"
-                        >
-                          却下
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                      {/* アクションボタン（未対応のみ） */}
+                      {app.status === 'pending' && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleApplicationAction(app.id, 'approved')}
+                            className="flex-1 bg-green-500 text-white text-sm font-bold py-2.5 rounded-xl active:scale-[0.98] transition-all"
+                          >
+                            ✅ 承認する
+                          </button>
+                          <button
+                            onClick={() => handleApplicationAction(app.id, 'rejected')}
+                            className="flex-1 bg-gray-200 text-gray-600 text-sm font-bold py-2.5 rounded-xl active:scale-[0.98] transition-all"
+                          >
+                            却下
+                          </button>
+                        </div>
+                      )}
+
+                      {/* 成立時: 評価ボタン */}
+                      {app.status === 'approved' && (
+                        <div className="mt-2">
+                          {reviewedApps.has(app.id) ? (
+                            <span className="block text-center bg-gray-100 text-gray-500 font-bold text-xs py-2 rounded-xl">
+                              ⭐ 評価済み
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => router.push(`/b/review/${app.id}`)}
+                              className="w-full bg-yellow-100 text-yellow-700 font-bold text-xs py-2 rounded-xl active:scale-[0.98] transition-all"
+                            >
+                              ⭐ 評価する
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
