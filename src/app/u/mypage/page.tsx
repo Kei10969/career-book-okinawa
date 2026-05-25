@@ -312,22 +312,22 @@ export default function UserMyPage() {
           <h2 className="font-bold text-sm text-gray-500 mb-2">📅 空き状況管理</h2>
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3 mb-3">
             <div className="grid grid-cols-2 gap-2">
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-bold text-gray-600 mb-1">開始日</label>
                 <input
                   type="date"
                   value={avDateFrom}
                   onChange={(e) => setAvDateFrom(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-200 rounded-xl p-2.5 text-sm text-center px-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="block text-xs font-bold text-gray-600 mb-1">終了日</label>
                 <input
                   type="date"
                   value={avDateTo}
                   onChange={(e) => setAvDateTo(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full border border-gray-200 rounded-xl p-2.5 text-sm text-center px-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
