@@ -39,13 +39,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const contactEmail = worker?.email || '未登録'
     const workerName = worker?.display_name || '職人'
 
-    // 企業にアプリ内通知（連絡先付き）
+    // 企業にアプリ内通知（連絡先付き）→ 職人プロフィールへリンク
     await supabase.from('notifications').insert({
       user_id: data.business_user_id,
       type: 'application_approved',
       title: 'アプローチが承諾されました！',
       message: `${workerName}さんがアプローチを承諾しました。連絡先: 電話 ${contactPhone} / メール ${contactEmail}`,
-      link: '/b/home',
+      link: `/b/search/${data.worker_user_id}`,
+      related_id: data.worker_user_id,
       is_read: false,
     })
 
@@ -57,13 +58,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       )
     }
 
-    // 職人にアプリ内通知
+    // 職人にアプリ内通知 → 企業プロフィールへリンク
     await supabase.from('notifications').insert({
       user_id: data.worker_user_id,
       type: 'application_approved',
       title: 'アプローチを承諾しました',
       message: '企業への連絡をお待ちください',
-      link: '/u/home',
+      link: `/u/business/${data.business_user_id}`,
+      related_id: data.business_user_id,
       is_read: false,
     })
 

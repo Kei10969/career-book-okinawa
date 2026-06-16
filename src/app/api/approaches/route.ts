@@ -118,13 +118,14 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // 職人にアプリ内通知を送信
+  // 職人にアプリ内通知を送信 → 企業プロフィールへリンク
   await supabase.from('notifications').insert({
     user_id: worker_user_id,
     type: 'new_application',
     title: '🏢 企業からアプローチが届きました！',
     message: '内容を確認して、承諾するかどうかお選びください。',
-    link: '/u/home',
+    link: `/u/business/${business_user_id}`,
+    related_id: business_user_id,
     is_read: false,
   })
 
