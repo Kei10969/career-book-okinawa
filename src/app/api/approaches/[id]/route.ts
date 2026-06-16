@@ -51,10 +51,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     })
 
     // 企業にLINE通知
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://career-book-okinawa-seven.vercel.app'
     if (business?.line_id) {
       await sendLinePush(
         business.line_id,
-        `✅ アプローチが承諾されました！\n連絡先: 電話 ${contactPhone} / メール ${contactEmail}`
+        `✅ アプローチが承諾されました！\n連絡先: 電話 ${contactPhone} / メール ${contactEmail}\n\n▼ 職人プロフィールを見る\n${appUrl}/b/search/${data.worker_user_id}`
       )
     }
 
@@ -91,9 +92,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
     // 企業にLINE通知
     if (business?.line_id) {
+      const appUrl2 = process.env.NEXT_PUBLIC_APP_URL || 'https://career-book-okinawa-seven.vercel.app'
       await sendLinePush(
         business.line_id,
-        '📋 アプローチ結果\n今回は見送りとなりました。'
+        `📋 アプローチ結果\n今回は見送りとなりました。\n\n▼ 他の人材を探す\n${appUrl2}/b/search`
       )
     }
 

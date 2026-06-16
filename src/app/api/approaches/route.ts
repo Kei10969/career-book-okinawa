@@ -137,9 +137,10 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (workerUser?.line_id) {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://career-book-okinawa-seven.vercel.app'
     await sendLinePush(
       workerUser.line_id,
-      '🏢 企業からアプローチが届きました！\nアプリで内容を確認してください。'
+      `🏢 企業からアプローチが届きました！\n\n内容を確認して、承諾するかどうかお選びください。\n\n▼ 企業プロフィールを見る\n${appUrl}/u/business/${business_user_id}`
     )
   }
 

@@ -75,9 +75,10 @@ export async function POST(req: NextRequest) {
         .single()
 
       if (requestOwner?.line_id) {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://career-book-okinawa-seven.vercel.app'
         await sendLinePush(
           requestOwner.line_id,
-          `📩 新しい応募が届きました！\n\n「${request.title}」に応募がありました。\nアプリで内容を確認してください。`
+          `📩 新しい応募が届きました！\n\n「${request.title}」に応募がありました。\n\n▼ 応募者を確認する\n${appUrl}/b/requests/${request.id}`
         )
       }
     }
@@ -133,10 +134,11 @@ export async function PATCH(req: NextRequest) {
       })
 
       // LINE プッシュ通知: 職人へ
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://career-book-okinawa-seven.vercel.app'
       if (applicant.line_id) {
         await sendLinePush(
           applicant.line_id,
-          `🎉 応募が成立しました！\n\n「${request.title}」への応募が承認されました。\n企業からの連絡をお待ちください。`
+          `🎉 応募が成立しました！\n\n「${request.title}」への応募が承認されました。\n企業からの連絡をお待ちください。\n\n▼ 企業プロフィールを見る\n${appUrl}/u/business/${request.user_id}`
         )
       }
 
@@ -153,7 +155,7 @@ export async function PATCH(req: NextRequest) {
         ].filter(Boolean).join('\n')
         await sendLinePush(
           businessUser.line_id,
-          `✅ 応募が成立しました！\n\n「${request.title}」\n応募者: ${applicant.display_name}\n${contactParts || '連絡先: 未登録'}`
+          `✅ 応募が成立しました！\n\n「${request.title}」\n応募者: ${applicant.display_name}\n${contactParts || '連絡先: 未登録'}\n\n▼ 職人プロフィールを見る\n${appUrl}/b/search/${applicant.id}`
         )
       }
 
@@ -189,9 +191,10 @@ export async function PATCH(req: NextRequest) {
 
       // LINE プッシュ通知: 職人へ
       if (applicant.line_id) {
+        const appUrl2 = process.env.NEXT_PUBLIC_APP_URL || 'https://career-book-okinawa-seven.vercel.app'
         await sendLinePush(
           applicant.line_id,
-          `📋 応募結果のお知らせ\n\n「${request.title}」への応募は、今回は見送りとなりました。\n\n引き続き他の募集もチェックしてみてください。`
+          `📋 応募結果のお知らせ\n\n「${request.title}」への応募は、今回は見送りとなりました。\n\n引き続き他の募集もチェックしてみてください。\n\n▼ 他の募集を探す\n${appUrl2}/u/home`
         )
       }
     }
