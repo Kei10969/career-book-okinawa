@@ -5,8 +5,17 @@ import AppShell from '@/components/AppShell'
 import PrimaryButton from '@/components/PrimaryButton'
 import { OKINAWA_CITIES, TRADES } from '@/lib/constants'
 import { getCurrentUserId } from '@/lib/auth'
+import ProfileGuard from '@/components/ProfileGuard'
 
 export default function BusinessPostPage() {
+  return (
+    <ProfileGuard role="business">
+      <BusinessPostForm />
+    </ProfileGuard>
+  )
+}
+
+function BusinessPostForm() {
   const router = useRouter()
   const [form, setForm] = useState({
     type: 'support',

@@ -35,13 +35,26 @@ export default function WorkerDetailPage() {
   const [approached, setApproached] = useState(false)
   const [message, setMessage] = useState('')
   const [showMessageForm, setShowMessageForm] = useState(false)
+  const [profileComplete, setProfileComplete] = useState(true)
 
   useEffect(() => {
     if (workerId) {
       fetchWorker()
       checkExistingApproach()
+      checkBusinessProfile()
     }
   }, [workerId])
+
+  async function checkBusinessProfile() {
+    const userId = getCurrentUserId()
+    try {
+      const res = await fetch(`/api/business-profiles?user_id=${userId}`)
+      if (res.ok) {
+        const data = await res.json()
+        setProfileComplete(!!(data && data.company_name))
+      }
+    } catch { /* ignore */ }
+  }
 
   async function fetchWorker() {
     try {
@@ -210,7 +223,19 @@ export default function WorkerDetailPage() {
         </div>
 
         {/* アプローチボタン */}
-        {approached ? (
+        {!profileComplete ? (
+          <div className="bg-yellow-50 rounded-2xl p-4 text-center space-y-3">
+            <span className="text-3xl">🏢</span>
+            <p className="font-bold text-sm text-gray-900">企業プロフィールを登録してください</p>
+            <p className="text-xs text-gray-500">アプローチするには、企業プロフィールの登録が必要です。</p>
+            <button
+              onClick={() => router.push('/b/profile-setup')}
+              className="w-full bg-orange-500 text-white font-bold text-sm py-3 rounded-xl active:scale-[0.98] transition-all"
+            >
+              プロフィールを登録する
+            </button>
+          </div>
+        ) : approached ? (
           <div className="bg-green-50 rounded-2xl p-4 text-center">
             <p className="text-green-700 font-bold text-sm">✅ アプローチ済みです</p>
             <p className="text-green-600 text-xs mt-1">職人の応答をお待ちください</p>

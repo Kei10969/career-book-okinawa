@@ -5,8 +5,17 @@ import AppShell from '@/components/AppShell'
 import PrimaryButton from '@/components/PrimaryButton'
 import { OKINAWA_CITIES, TRADES } from '@/lib/constants'
 import { getCurrentUserId } from '@/lib/auth'
+import ProfileGuard from '@/components/ProfileGuard'
 
 export default function UserOfferPage() {
+  return (
+    <ProfileGuard role="user">
+      <UserOfferForm />
+    </ProfileGuard>
+  )
+}
+
+function UserOfferForm() {
   const router = useRouter()
   const [form, setForm] = useState({
     area: '',

@@ -17,6 +17,7 @@ export default function UserRequestDetailPage({ params }: { params: Promise<{ id
   const [applied, setApplied] = useState(false)
   const [myApplication, setMyApplication] = useState<{ id: string; status: string } | null>(null)
   const [cancelCounts, setCancelCounts] = useState({ late: 0, no_show: 0 })
+  const [profileComplete, setProfileComplete] = useState(true)
 
   useEffect(() => {
     fetchRequest()
@@ -39,7 +40,7 @@ export default function UserRequestDetailPage({ params }: { params: Promise<{ id
       setMyApplication(data[0])
     }
 
-    // 自分のキャンセル回数を取得
+    // 自分のキャンセル回数 + プロフィール完了チェック
     try {
       const uRes = await fetch(`/api/users/${userId}`)
       const uData = await uRes.json()
@@ -47,6 +48,7 @@ export default function UserRequestDetailPage({ params }: { params: Promise<{ id
         late: uData.late_cancel_count || 0,
         no_show: uData.no_show_count || 0,
       })
+      setProfileComplete(!!uData.profile_completed)
     } catch { /* ignore */ }
   }
 
@@ -221,6 +223,18 @@ export default function UserRequestDetailPage({ params }: { params: Promise<{ id
                 <span className="text-green-600 font-bold">✅ 応募済み</span>
               </div>
             )}
+          </div>
+        ) : !profileComplete ? (
+          <div className="bg-yellow-50 rounded-2xl p-4 text-center space-y-3">
+            <span className="text-3xl">📝</span>
+            <p className="font-bold text-sm text-gray-900">プロフィールを登録してください</p>
+            <p className="text-xs text-gray-500">応募するには、職種・希望エリアなどのプロフィール登録が必要です。</p>
+            <button
+              onClick={() => router.push('/u/profile-setup')}
+              className="w-full bg-blue-600 text-white font-bold text-sm py-3 rounded-xl active:scale-[0.98] transition-all"
+            >
+              プロフィールを登録する
+            </button>
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
