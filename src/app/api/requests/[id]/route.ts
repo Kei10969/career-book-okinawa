@@ -45,8 +45,23 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { id } = await params
   const userId = req.nextUrl.searchParams.get('user_id')
 
-  // 関連する応募を先に削除
-  await supabase.from('applications').delete().eq('request_id', id)
+  // 関連する応募IDを取得
+  const { data: apps } = await supabase
+    .from('applications')
+    .select('id')
+    .eq('request_id', id)
+
+  if (apps && apps.length > 0) {
+    const appIds = apps.map(a => a.id)
+
+    // cancellations → reviews → applications の順に削除（外部キー制約対応）
+    await supabase.from('cancellations').delete().in('application_id', appIds)
+    await supabase.from('reviews').delete().in('application_id', appIds)
+    await supabase.from('applications').delete().eq('request_id', id)
+  }
+
+  // 関連する通知も削除（linkにrequest_idが含まれるもの）
+  await supabase.from('notifications').delete().like('link', `%${id}%`)
 
   let query = supabase.from('requests').delete().eq('id', id)
   if (userId) query = query.eq('user_id', userId)
