@@ -46,7 +46,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       title: 'アプローチが承諾されました！',
       message: `${workerName}さんがアプローチを承諾しました。連絡先: 電話 ${contactPhone} / メール ${contactEmail}`,
       link: `/b/search/${data.worker_user_id}`,
-      related_id: data.worker_user_id,
       is_read: false,
     })
 
@@ -66,7 +65,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       title: 'アプローチを承諾しました',
       message: '企業への連絡をお待ちください',
       link: `/u/business/${data.business_user_id}`,
-      related_id: data.business_user_id,
       is_read: false,
     })
 

@@ -1,9 +1,11 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { initLiff, liff, isLiffLoggedIn, isInLiffClient } from '@/lib/liff'
 import type { UserRole } from '@/types/database'
 
 export default function LoginPage() {
+  const router = useRouter()
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
@@ -24,7 +26,7 @@ export default function LoginPage() {
       const userId = localStorage.getItem('user_id')
       const userRole = localStorage.getItem('user_role') as UserRole
       if (userId && userRole) {
-        window.location.href = userRole === 'business' ? '/b/home' : '/u/home'
+        router.push(userRole === 'business' ? '/b/home' : '/u/home')
         return
       }
 
@@ -148,10 +150,10 @@ export default function LoginPage() {
   function redirectAfterLogin(user: Record<string, unknown>) {
     if (user.role === 'user') {
       if (!user.profile_completed) {
-        window.location.href = '/u/profile-setup'
+        router.push('/u/profile-setup')
         return
       }
-      window.location.href = '/u/home'
+      router.push('/u/home')
       return
     }
 
@@ -160,13 +162,13 @@ export default function LoginPage() {
       .then(res => res.json())
       .then(data => {
         if (!data || data.error || !data.company_name) {
-          window.location.href = '/b/profile-setup'
+          router.push('/b/profile-setup')
         } else {
-          window.location.href = '/b/home'
+          router.push('/b/home')
         }
       })
       .catch(() => {
-        window.location.href = '/b/profile-setup'
+        router.push('/b/profile-setup')
       })
   }
 

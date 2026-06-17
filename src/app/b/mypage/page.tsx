@@ -130,10 +130,18 @@ export default function BusinessMyPage() {
 
   async function deleteAvailability(avId: string) {
     if (!confirm('この空き情報を削除しますか？')) return
-    const res = await fetch(`/api/availability?id=${avId}`, { method: 'DELETE' })
-    if (res.ok) {
-      setAvailabilities(prev => prev.filter(a => a.id !== avId))
-    } else {
+    try {
+      const res = await fetch(`/api/availability?id=${avId}`, { method: 'DELETE' })
+      if (res.ok) {
+        setAvailabilities(prev => prev.filter(a => a.id !== avId))
+      } else {
+        const errData = await res.json().catch(() => null)
+        console.error('削除エラー:', res.status, errData)
+        alert('削除に失敗しました')
+        fetchData()
+      }
+    } catch (e) {
+      console.error('削除エラー:', e)
       alert('削除に失敗しました')
     }
   }

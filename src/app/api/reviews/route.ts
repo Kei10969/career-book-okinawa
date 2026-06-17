@@ -8,8 +8,57 @@ const supabase = createClient(
 
 export async function GET(req: NextRequest) {
   const revieweeId = req.nextUrl.searchParams.get('reviewee_id')
+  const revieweeIds = req.nextUrl.searchParams.get('reviewee_ids')
   const applicationId = req.nextUrl.searchParams.get('application_id')
   const reviewerId = req.nextUrl.searchParams.get('reviewer_id')
+  const mode = req.nextUrl.searchParams.get('mode')
+
+  // mode=reviewed_apps: reviewer_idが評価済みのapplication_id一覧を返す
+  if (mode === 'reviewed_apps' && reviewerId) {
+    const { data, error } = await supabase
+      .from('reviews')
+      .select('application_id')
+      .eq('reviewer_id', reviewerId)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    const ids = data?.map(r => r.application_id) || []
+    const response = NextResponse.json({ reviewed_application_ids: ids })
+    response.headers.set('Cache-Control', 'private, s-maxage=60, stale-while-revalidate=120')
+    return response
+  }
+
+  // reviewee_ids: 複数ユーザーの評価サマリーを一括返却
+  if (revieweeIds) {
+    const ids = revieweeIds.split(',').filter(Boolean)
+    if (ids.length === 0) return NextResponse.json({})
+
+    const { data, error } = await supabase
+      .from('reviews')
+      .select('reviewee_id, quality_rating, deadline_rating, communication_rating, repeat_rating')
+      .in('reviewee_id', ids)
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    const summaries: Record<string, { avg: number; total: number }> = {}
+    const grouped: Record<string, Array<{ quality_rating: number; deadline_rating: number; communication_rating: number; repeat_rating: number }>> = {}
+    for (const r of (data || [])) {
+      if (!grouped[r.reviewee_id]) grouped[r.reviewee_id] = []
+      grouped[r.reviewee_id].push(r)
+    }
+    for (const [uid, reviews] of Object.entries(grouped)) {
+      const total = reviews.length
+      const avgQ = reviews.reduce((s, r) => s + (r.quality_rating || 0), 0) / total
+      const avgD = reviews.reduce((s, r) => s + (r.deadline_rating || 0), 0) / total
+      const avgC = reviews.reduce((s, r) => s + (r.communication_rating || 0), 0) / total
+      const avgR = reviews.reduce((s, r) => s + (r.repeat_rating || 0), 0) / total
+      const avg = Math.round(((avgQ + avgD + avgC + avgR) / 4) * 10) / 10
+      summaries[uid] = { avg, total }
+    }
+
+    const response = NextResponse.json(summaries)
+    response.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300')
+    return response
+  }
 
   // 特定の application_id + reviewer_id の組み合わせで既存チェック
   if (applicationId && reviewerId) {
@@ -50,13 +99,15 @@ export async function GET(req: NextRequest) {
     return Math.round((sum / total) * 10) / 10
   }
 
-  return NextResponse.json({
+  const response = NextResponse.json({
     avg_quality: avg('quality_rating'),
     avg_deadline: avg('deadline_rating'),
     avg_communication: avg('communication_rating'),
     avg_repeat: avg('repeat_rating'),
     total_reviews: total,
   })
+  response.headers.set('Cache-Control', 'public, s-maxage=120, stale-while-revalidate=300')
+  return response
 }
 
 export async function POST(req: NextRequest) {

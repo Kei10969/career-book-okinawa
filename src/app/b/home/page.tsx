@@ -85,31 +85,45 @@ export default function BusinessHomePage() {
     const userId = getCurrentUserId()
 
     try {
-      // 自分の投稿を取得
-      const reqRes = await fetch(`/api/requests?user_id=${userId}`)
-      const reqData = await reqRes.json()
+      // ========= Phase 1: 並列で独立データを一括取得 =========
+      const [reqRes, appsRes, allReqRes, offersRes, avRes] = await Promise.all([
+        fetch(`/api/requests?user_id=${userId}`),
+        fetch(`/api/applications?owner_user_id=${userId}`),
+        fetch('/api/requests'),
+        fetch('/api/offers'),
+        fetch('/api/availability?include_user=true'),
+      ])
+
+      const [reqData, appsData, allReqData, offersData, avData] = await Promise.all([
+        reqRes.json(),
+        appsRes.json(),
+        allReqRes.json(),
+        offersRes.json(),
+        avRes.json(),
+      ])
+
       const reqs = Array.isArray(reqData) ? reqData : []
-      setRequests(reqs)
+      const allApps: OfferItem[] = Array.isArray(appsData)
+        ? appsData.map((app: OfferItem & { request?: { id: string; title: string; type: string } }) => ({
+            ...app,
+            request: app.request ? { title: app.request.title, type: app.request.type } : undefined,
+          }))
+        : []
 
-      // 全投稿の応募を一括取得
-      const allApps: OfferItem[] = []
-      let pendingCount = 0
-      let matchedCount = 0
-
+      // requestごとの応募数カウント
+      const appCountByReq: Record<string, number> = {}
+      for (const app of allApps) {
+        const rid = app.request_id
+        appCountByReq[rid] = (appCountByReq[rid] || 0) + 1
+      }
       for (const req of reqs) {
-        const appRes = await fetch(`/api/applications?request_id=${req.id}`)
-        const apps = await appRes.json()
-        const appList = Array.isArray(apps) ? apps : []
-
-        for (const app of appList) {
-          allApps.push({ ...app, request: { title: req.title, type: req.type } })
-        }
-
-        pendingCount += appList.filter((a: { status: string }) => a.status === 'pending').length
-        matchedCount += appList.filter((a: { status: string }) => a.status === 'approved').length
-        req._count = { applications: appList.length }
+        req._count = { applications: appCountByReq[req.id] || 0 }
       }
 
+      const pendingCount = allApps.filter(a => a.status === 'pending').length
+      const matchedCount = allApps.filter(a => a.status === 'approved').length
+
+      setRequests(reqs)
       setApplications(allApps)
       setStats({
         posts: reqs.length,
@@ -117,81 +131,50 @@ export default function BusinessHomePage() {
         pending: pendingCount,
         matched: matchedCount,
       })
-
-      // 評価済みチェック & レビューサマリー取得
-      const reviewed = new Set<string>()
-      const summaries: ReviewSummaryMap = {}
-      for (const app of allApps) {
-        if (app.status === 'approved') {
-          try {
-            const rRes = await fetch(`/api/reviews?application_id=${app.id}&reviewer_id=${userId}`)
-            const rData = await rRes.json()
-            if (rData.exists) reviewed.add(app.id)
-          } catch { /* ignore */ }
-        }
-        // 応募者の評価サマリーを取得
-        const applicantId = app.applicant_id || app.applicant?.id
-        if (applicantId && !summaries[applicantId]) {
-          try {
-            const sRes = await fetch(`/api/reviews?reviewee_id=${applicantId}`)
-            const sData = await sRes.json()
-            if (sData.total_reviews > 0) {
-              const avg = Math.round(((sData.avg_quality + sData.avg_deadline + sData.avg_communication + sData.avg_repeat) / 4) * 10) / 10
-              summaries[applicantId] = { avg, total: sData.total_reviews }
-            }
-          } catch { /* ignore */ }
-        }
-      }
-      setReviewedApps(reviewed)
-      setReviewSummaries(summaries)
-
-      // 全募集一覧（他社含む）を取得
-      const allReqRes = await fetch('/api/requests')
-      const allReqData = await allReqRes.json()
       setAllRequests(Array.isArray(allReqData) ? allReqData : [])
-
-      // 職人のオファー一覧を取得
-      const offersRes = await fetch('/api/offers')
-      const offersData = await offersRes.json()
       setWorkerOffers(Array.isArray(offersData) ? offersData : [])
 
-      // 今空いてる職人を取得（今日〜7日以内）
-      try {
-        const avRes = await fetch('/api/availability')
-        const avData = await avRes.json()
-        if (Array.isArray(avData)) {
-          const today = new Date()
-          const weekLater = new Date()
-          weekLater.setDate(weekLater.getDate() + 7)
-          const todayStr = today.toISOString().split('T')[0]
-          const weekStr = weekLater.toISOString().split('T')[0]
+      // ========= Phase 2: 評価データ一括取得（並列） =========
+      const applicantIds = [...new Set(allApps.map(a => a.applicant_id || a.applicant?.id).filter(Boolean))] as string[]
 
-          // 今日〜7日以内に空きがある人
-          const nearAvailability = avData.filter((a: { date_from: string; date_to: string }) =>
-            a.date_from <= weekStr && a.date_to >= todayStr
-          )
+      const [reviewedRes, summariesRes] = await Promise.all([
+        fetch(`/api/reviews?mode=reviewed_apps&reviewer_id=${userId}`),
+        applicantIds.length > 0
+          ? fetch(`/api/reviews?reviewee_ids=${applicantIds.join(',')}`)
+          : Promise.resolve(null),
+      ])
 
-          // ユーザーIDで重複排除して最大5件
-          const seen = new Set<string>()
-          const unique: AvailableWorker[] = []
-          for (const av of nearAvailability) {
-            if (!seen.has(av.user_id) && unique.length < 5) {
-              seen.add(av.user_id)
-              unique.push(av)
-            }
+      const reviewedData = await reviewedRes.json()
+      const reviewed = new Set<string>(reviewedData.reviewed_application_ids || [])
+      setReviewedApps(reviewed)
+
+      if (summariesRes) {
+        const summaries: ReviewSummaryMap = await summariesRes.json()
+        setReviewSummaries(summaries)
+      }
+
+      // ========= Phase 3: 空き職人（既にuser情報joinされている） =========
+      if (Array.isArray(avData)) {
+        const today = new Date()
+        const weekLater = new Date()
+        weekLater.setDate(weekLater.getDate() + 7)
+        const todayStr = today.toISOString().split('T')[0]
+        const weekStr = weekLater.toISOString().split('T')[0]
+
+        const nearAvailability = avData.filter((a: { date_from: string; date_to: string }) =>
+          a.date_from <= weekStr && a.date_to >= todayStr
+        )
+
+        const seen = new Set<string>()
+        const unique: AvailableWorker[] = []
+        for (const av of nearAvailability) {
+          if (!seen.has(av.user_id) && unique.length < 5) {
+            seen.add(av.user_id)
+            unique.push(av)
           }
-
-          // 各ユーザーのプロフィールを取得
-          for (const av of unique) {
-            try {
-              const uRes = await fetch(`/api/users/${av.user_id}`)
-              const uData = await uRes.json()
-              av.user = { id: uData.id, skills: uData.skills || [], areas: uData.areas || [] }
-            } catch { /* ignore */ }
-          }
-          setAvailableWorkers(unique)
         }
-      } catch { /* ignore */ }
+        setAvailableWorkers(unique)
+      }
     } catch (e) {
       console.error('fetchData error:', e)
     }

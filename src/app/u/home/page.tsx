@@ -17,7 +17,7 @@ interface ApproachWithDetails extends Approach {
 }
 
 export default function UserHomePage() {
-  const [requests, setRequests] = useState<Request[]>([])
+  const [allRequests, setAllRequests] = useState<Request[]>([])
   const [approaches, setApproaches] = useState<ApproachWithDetails[]>([])
   const [loading, setLoading] = useState(true)
   const [typeFilter, setTypeFilter] = useState<'all' | 'support' | 'subcontract'>('all')
@@ -26,37 +26,37 @@ export default function UserHomePage() {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    fetchRequests()
-  }, [typeFilter, areaFilter])
-
-  useEffect(() => {
-    fetchApproaches()
+    fetchInitialData()
   }, [])
 
-  async function fetchRequests() {
-    setLoading(true)
-    const params = new URLSearchParams()
-    if (typeFilter !== 'all') params.set('type', typeFilter)
-    if (areaFilter !== 'all') params.set('area', areaFilter)
+  async function fetchInitialData() {
+    const userId = getCurrentUserId()
 
-    const res = await fetch(`/api/requests?${params}`)
-    const data = await res.json()
-    setRequests(data)
+    try {
+      const [reqRes, appRes] = await Promise.all([
+        fetch('/api/requests'),
+        fetch(`/api/approaches?worker_user_id=${userId}`),
+      ])
+
+      const [reqData, appData] = await Promise.all([
+        reqRes.json(),
+        appRes.ok ? appRes.json() : [],
+      ])
+
+      setAllRequests(Array.isArray(reqData) ? reqData : [])
+      setApproaches(Array.isArray(appData) ? appData : [])
+    } catch (e) {
+      console.error('fetchInitialData error:', e)
+    }
     setLoading(false)
   }
 
-  async function fetchApproaches() {
-    const userId = getCurrentUserId()
-    try {
-      const res = await fetch(`/api/approaches?worker_user_id=${userId}`)
-      if (res.ok) {
-        const data = await res.json()
-        setApproaches(Array.isArray(data) ? data : [])
-      }
-    } catch (e) {
-      console.error('fetchApproaches error:', e)
-    }
-  }
+  // クライアントサイドフィルタ（API呼び出し不要）
+  const filteredRequests = allRequests.filter(req => {
+    if (typeFilter !== 'all' && req.type !== typeFilter) return false
+    if (areaFilter !== 'all' && req.area !== areaFilter) return false
+    return true
+  })
 
   async function handleApproachAction(approachId: string, status: 'accepted' | 'rejected') {
     setActionLoading(approachId)
@@ -236,11 +236,11 @@ export default function UserHomePage() {
         <div className="flex justify-center py-12">
           <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
         </div>
-      ) : requests.length === 0 ? (
+      ) : filteredRequests.length === 0 ? (
         <EmptyState icon="📋" title="募集がまだありません" description="新しい募集が投稿されるまでお待ちください" />
       ) : (
         <div>
-          {requests.map((req) => (
+          {filteredRequests.map((req) => (
             <RequestCard key={req.id} request={req} linkPrefix="/u" />
           ))}
         </div>

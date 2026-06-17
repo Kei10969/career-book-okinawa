@@ -115,7 +115,6 @@ export async function PATCH(req: NextRequest) {
         title: '応募が成立しました！',
         message: `「${request.title}」への応募が承認されました。企業からの連絡をお待ちください。`,
         link: `/u/business/${request.user_id}`,
-        related_id: request.user_id,
       })
 
       // 企業に通知（連絡先付き）→ 職人プロフィールへリンク
@@ -130,7 +129,6 @@ export async function PATCH(req: NextRequest) {
         title: '応募が成立しました！',
         message: `「${request.title}」への応募者（${applicant.display_name}）と成立しました。${contactInfo ? `連絡先: ${contactInfo}` : '連絡先が未登録です。'}`,
         link: `/b/search/${applicant.id}`,
-        related_id: applicant.id,
       })
 
       // LINE プッシュ通知: 職人へ

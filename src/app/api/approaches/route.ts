@@ -125,7 +125,6 @@ export async function POST(req: NextRequest) {
     title: '🏢 企業からアプローチが届きました！',
     message: '内容を確認して、承諾するかどうかお選びください。',
     link: `/u/business/${business_user_id}`,
-    related_id: business_user_id,
     is_read: false,
   })
 
