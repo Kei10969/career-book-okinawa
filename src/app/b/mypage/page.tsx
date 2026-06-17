@@ -95,8 +95,13 @@ export default function BusinessMyPage() {
     const res = await fetch(`/api/requests/${requestId}?user_id=${userId}`, { method: 'DELETE' })
     if (res.ok) {
       setRequests((prev) => prev.filter((r) => r.id !== requestId))
+      alert('削除しました')
     } else {
       alert('削除に失敗しました')
+      // 失敗時はデータを再取得して最新状態に
+      const reqRes = await fetch(`/api/requests?user_id=${userId}`)
+      const reqData = await reqRes.json()
+      setRequests(Array.isArray(reqData) ? reqData : [])
     }
   }
 

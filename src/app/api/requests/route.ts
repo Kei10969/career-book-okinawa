@@ -27,7 +27,12 @@ export async function GET(req: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   const response = NextResponse.json(data)
-  response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
+  // user_id指定（マイページ）の場合はキャッシュしない
+  if (userId) {
+    response.headers.set('Cache-Control', 'private, no-cache, no-store')
+  } else {
+    response.headers.set('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=30')
+  }
   return response
 }
 
