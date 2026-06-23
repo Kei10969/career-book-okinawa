@@ -8,6 +8,9 @@ import { getCurrentUserId } from '@/lib/auth'
 
 interface WorkerDetail {
   id: string
+  display_name?: string | null
+  phone?: string | null
+  email?: string | null
   skills: string[]
   areas: string[]
   qualifications: string[]
@@ -58,7 +61,8 @@ export default function WorkerDetailPage() {
 
   async function fetchWorker() {
     try {
-      const res = await fetch(`/api/workers/${workerId}`)
+      const userId = getCurrentUserId()
+      const res = await fetch(`/api/workers/${workerId}?viewer_id=${userId}`)
       if (res.ok) {
         const data = await res.json()
         setWorker(data)
@@ -171,6 +175,34 @@ export default function WorkerDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* 連絡先（成立済みの場合のみ表示） */}
+        {(worker.phone || worker.email || worker.display_name) && (
+          <div className="bg-green-50 border border-green-200 rounded-2xl shadow-sm p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-lg">🤝</span>
+              <p className="text-sm font-black text-green-800">成立済み — 連絡先</p>
+            </div>
+            {worker.display_name && (
+              <div>
+                <p className="text-xs text-green-600 font-bold mb-1">名前</p>
+                <p className="text-sm font-bold text-gray-800">👤 {worker.display_name}</p>
+              </div>
+            )}
+            {worker.phone && (
+              <div>
+                <p className="text-xs text-green-600 font-bold mb-1">電話番号</p>
+                <a href={`tel:${worker.phone}`} className="text-sm font-bold text-blue-600 underline">📞 {worker.phone}</a>
+              </div>
+            )}
+            {worker.email && (
+              <div>
+                <p className="text-xs text-green-600 font-bold mb-1">メールアドレス</p>
+                <a href={`mailto:${worker.email}`} className="text-sm font-bold text-blue-600 underline">✉️ {worker.email}</a>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 詳細情報 */}
         <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
