@@ -44,18 +44,6 @@ interface WorkerOffer {
   user?: { display_name: string; avatar_url: string | null }
 }
 
-interface AvailableWorker {
-  user_id: string
-  date_from: string
-  date_to: string
-  note: string | null
-  user?: {
-    id: string
-    skills: string[]
-    areas: string[]
-  }
-}
-
 interface ReviewSummaryMap {
   [userId: string]: { avg: number; total: number }
 }
@@ -66,7 +54,6 @@ export default function BusinessHomePage() {
   const [allRequests, setAllRequests] = useState<Request[]>([])
   const [applications, setApplications] = useState<OfferItem[]>([])
   const [workerOffers, setWorkerOffers] = useState<WorkerOffer[]>([])
-  const [availableWorkers, setAvailableWorkers] = useState<AvailableWorker[]>([])
   const [loading, setLoading] = useState(true)
   const [companyName, setCompanyName] = useState('')
   const [stats, setStats] = useState({ posts: 0, applications: 0, pending: 0, matched: 0 })
@@ -86,20 +73,18 @@ export default function BusinessHomePage() {
 
     try {
       // ========= Phase 1: 並列で独立データを一括取得 =========
-      const [reqRes, appsRes, allReqRes, offersRes, avRes] = await Promise.all([
+      const [reqRes, appsRes, allReqRes, offersRes] = await Promise.all([
         fetch(`/api/requests?user_id=${userId}`),
         fetch(`/api/applications?owner_user_id=${userId}`),
         fetch('/api/requests'),
         fetch('/api/offers'),
-        fetch('/api/availability?include_user=true'),
       ])
 
-      const [reqData, appsData, allReqData, offersData, avData] = await Promise.all([
+      const [reqData, appsData, allReqData, offersData] = await Promise.all([
         reqRes.json(),
         appsRes.json(),
         allReqRes.json(),
         offersRes.json(),
-        avRes.json(),
       ])
 
       const reqs = Array.isArray(reqData) ? reqData : []
@@ -153,28 +138,6 @@ export default function BusinessHomePage() {
         setReviewSummaries(summaries)
       }
 
-      // ========= Phase 3: 空き職人（既にuser情報joinされている） =========
-      if (Array.isArray(avData)) {
-        const today = new Date()
-        const weekLater = new Date()
-        weekLater.setDate(weekLater.getDate() + 7)
-        const todayStr = today.toISOString().split('T')[0]
-        const weekStr = weekLater.toISOString().split('T')[0]
-
-        const nearAvailability = avData.filter((a: { date_from: string; date_to: string }) =>
-          a.date_from <= weekStr && a.date_to >= todayStr
-        )
-
-        const seen = new Set<string>()
-        const unique: AvailableWorker[] = []
-        for (const av of nearAvailability) {
-          if (!seen.has(av.user_id) && unique.length < 5) {
-            seen.add(av.user_id)
-            unique.push(av)
-          }
-        }
-        setAvailableWorkers(unique)
-      }
     } catch (e) {
       console.error('fetchData error:', e)
     }
@@ -238,48 +201,6 @@ export default function BusinessHomePage() {
             <SummaryCard icon="⏳" label="未対応" value={stats.pending} color="text-yellow-600" />
             <SummaryCard icon="🤝" label="成立" value={stats.matched} color="text-green-600" />
           </div>
-
-          {/* 📅 今空いてる職人 */}
-          {availableWorkers.length > 0 && (
-            <div>
-              <h2 className="font-bold text-sm text-gray-500 mb-3">📅 今空いてる職人</h2>
-              <div className="space-y-2">
-                {availableWorkers.map((av) => (
-                  <div
-                    key={av.user_id}
-                    className="bg-white rounded-2xl shadow-sm p-4 border border-gray-100 cursor-pointer active:scale-[0.99] transition-all"
-                    onClick={() => router.push(`/b/search/${av.user_id}`)}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-                        <svg className="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-sm text-gray-900">
-                          {av.user?.skills?.[0] || '職種未設定'}
-                        </p>
-                        {av.user?.areas && av.user.areas.length > 0 && (
-                          <p className="text-xs text-gray-500">📍 {av.user.areas.join(' / ')}</p>
-                        )}
-                        <p className="text-xs text-green-600 font-bold mt-1">
-                          📅 {av.date_from} 〜 {av.date_to}
-                        </p>
-                        {av.note && <p className="text-xs text-gray-400 mt-0.5">{av.note}</p>}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <button
-                  onClick={() => router.push('/b/search')}
-                  className="w-full text-center text-orange-500 font-bold text-sm py-2"
-                >
-                  もっと見る →
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* オファー一覧 */}
           <div>

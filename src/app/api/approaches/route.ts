@@ -7,11 +7,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-function typeToRole(type: string): string {
-  if (type === 'company') return 'business'
-  return 'user'
-}
-
 export async function GET(req: NextRequest) {
   const workerUserId = req.nextUrl.searchParams.get('worker_user_id')
   const businessUserId = req.nextUrl.searchParams.get('business_user_id')
@@ -33,17 +28,12 @@ export async function GET(req: NextRequest) {
   // 関連ユーザー情報を取得
   const enriched = await Promise.all(
     (data || []).map(async (approach) => {
-      const [bizRes, workerRes] = await Promise.all([
-        supabase.from('users').select('*').eq('id', approach.business_user_id).single(),
-        supabase.from('users').select('*').eq('id', approach.worker_user_id).single(),
+      const [workerRes, bizProfileRes] = await Promise.all([
+        supabase.from('users').select('id, display_name, skills, areas, qualifications, experience_years, desired_salary, job_status, bio, phone, email').eq('id', approach.worker_user_id).single(),
+        supabase.from('business_profiles').select('*').eq('user_id', approach.business_user_id).single(),
       ])
 
-      const businessUser = bizRes.data ? {
-        ...bizRes.data,
-        role: typeToRole(bizRes.data.type || 'individual'),
-      } : null
-
-      // status === 'accepted' の場合のみworkerの連絡先を開示
+      // 職人情報（承諾時のみ連絡先を開示）
       const workerData = workerRes.data
       let workerUser = null
       if (workerData) {
@@ -57,7 +47,6 @@ export async function GET(req: NextRequest) {
           desired_salary: workerData.desired_salary,
           job_status: workerData.job_status,
           bio: workerData.bio,
-          role: typeToRole(workerData.type || 'individual'),
           ...(approach.status === 'accepted' ? {
             phone: workerData.phone,
             email: workerData.email,
@@ -65,18 +54,10 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      // 企業プロフィール情報も取得
-      const { data: bizProfile } = await supabase
-        .from('business_profiles')
-        .select('*')
-        .eq('user_id', approach.business_user_id)
-        .single()
-
       return {
         ...approach,
-        business_user: businessUser,
         worker_user: workerUser,
-        business_profile: bizProfile,
+        business_profile: bizProfileRes.data,
       }
     })
   )
@@ -90,19 +71,6 @@ export async function POST(req: NextRequest) {
 
   if (!business_user_id || !worker_user_id) {
     return NextResponse.json({ error: 'business_user_id and worker_user_id required' }, { status: 400 })
-  }
-
-  // 重複チェック（同じ企業→同じ職人へのpendingアプローチが既にある場合）
-  const { data: existing } = await supabase
-    .from('approaches')
-    .select('id')
-    .eq('business_user_id', business_user_id)
-    .eq('worker_user_id', worker_user_id)
-    .eq('status', 'pending')
-    .single()
-
-  if (existing) {
-    return NextResponse.json({ error: 'すでにアプローチ済みです' }, { status: 409 })
   }
 
   const { data, error } = await supabase
@@ -125,6 +93,8 @@ export async function POST(req: NextRequest) {
     title: '🏢 企業からアプローチが届きました！',
     message: '内容を確認して、承諾するかどうかお選びください。',
     link: `/u/business/${business_user_id}`,
+    profile_link: `/u/business/${business_user_id}`,
+    role: 'user',
     is_read: false,
   })
 

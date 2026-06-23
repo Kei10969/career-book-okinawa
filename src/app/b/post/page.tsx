@@ -168,28 +168,31 @@ function BusinessPostForm() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelClass}>日当（円）</label>
-            <input
-              type="number"
-              value={form.daily_rate}
-              onChange={(e) => updateForm('daily_rate', e.target.value)}
-              placeholder="15000"
-              className={inputClass}
-            />
+        {/* 応援の場合のみ日当・人数を表示 */}
+        {form.type === 'support' && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelClass}>日当（円）</label>
+              <input
+                type="number"
+                value={form.daily_rate}
+                onChange={(e) => updateForm('daily_rate', e.target.value)}
+                placeholder="15000"
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className={labelClass}>募集人数</label>
+              <input
+                type="number"
+                value={form.headcount}
+                onChange={(e) => updateForm('headcount', e.target.value)}
+                placeholder="3"
+                className={inputClass}
+              />
+            </div>
           </div>
-          <div>
-            <label className={labelClass}>募集人数</label>
-            <input
-              type="number"
-              value={form.headcount}
-              onChange={(e) => updateForm('headcount', e.target.value)}
-              placeholder="3"
-              className={inputClass}
-            />
-          </div>
-        </div>
+        )}
 
         <div>
           <label className={labelClass}>詳細説明 *</label>

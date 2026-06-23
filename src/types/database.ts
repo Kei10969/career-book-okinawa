@@ -125,6 +125,8 @@ export interface Notification {
   title: string
   message: string
   link: string | null
+  profile_link: string | null
+  role: 'user' | 'business' | null
   is_read: boolean
   related_id: string | null
   created_at: string
@@ -324,6 +326,8 @@ export type Database = {
           title: string
           message: string
           link?: string | null
+          profile_link?: string | null
+          role?: 'user' | 'business' | null
           is_read?: boolean
           related_id?: string | null
         }
@@ -334,6 +338,8 @@ export type Database = {
           title?: string
           message?: string
           link?: string | null
+          profile_link?: string | null
+          role?: 'user' | 'business' | null
           is_read?: boolean
           related_id?: string | null
         }

@@ -24,11 +24,6 @@ interface ReviewInfo {
   total: number
 }
 
-interface AvailabilityInfo {
-  date_from: string
-  date_to: string
-}
-
 const JOB_STATUS_BADGE: Record<string, string> = {
   immediate: 'bg-green-100 text-green-700',
   considering: 'bg-yellow-100 text-yellow-700',
@@ -42,15 +37,13 @@ export default function BusinessSearchPage() {
   const [tradeFilter, setTradeFilter] = useState('all')
   const [areaFilter, setAreaFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [dateFilter, setDateFilter] = useState('')
   const [reviewMap, setReviewMap] = useState<Record<string, ReviewInfo>>({})
-  const [availMap, setAvailMap] = useState<Record<string, AvailabilityInfo[]>>({})
   const [cancelMap, setCancelMap] = useState<Record<string, { late: number; no_show: number }>>({})
   const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchWorkers()
-  }, [tradeFilter, areaFilter, statusFilter, dateFilter])
+  }, [tradeFilter, areaFilter, statusFilter])
 
   async function fetchWorkers() {
     setLoading(true)
@@ -62,29 +55,11 @@ export default function BusinessSearchPage() {
     try {
       const res = await fetch(`/api/workers?${params}`)
       const data = await res.json()
-      let workerList: WorkerProfile[] = Array.isArray(data) ? data : []
-
-      // 空き日フィルタ: 特定日に空いてる人のみ
-      let availableUserIds: Set<string> | null = null
-      if (dateFilter) {
-        try {
-          const avRes = await fetch(`/api/availability?date=${dateFilter}`)
-          const avData = await avRes.json()
-          if (Array.isArray(avData)) {
-            availableUserIds = new Set(avData.map((a: { user_id: string }) => a.user_id))
-          }
-        } catch { /* ignore */ }
-      }
-
-      if (availableUserIds) {
-        workerList = workerList.filter(w => availableUserIds!.has(w.id))
-      }
-
+      const workerList: WorkerProfile[] = Array.isArray(data) ? data : []
       setWorkers(workerList)
 
       // 各職人の評価・空き・キャンセル回数を取得
       const reviews: Record<string, ReviewInfo> = {}
-      const avails: Record<string, AvailabilityInfo[]> = {}
       const cancels: Record<string, { late: number; no_show: number }> = {}
 
       for (const worker of workerList) {
@@ -95,18 +70,6 @@ export default function BusinessSearchPage() {
           if (rData.total_reviews > 0) {
             const avg = Math.round(((rData.avg_quality + rData.avg_deadline + rData.avg_communication + rData.avg_repeat) / 4) * 10) / 10
             reviews[worker.id] = { avg, total: rData.total_reviews }
-          }
-        } catch { /* ignore */ }
-
-        // 空き状況
-        try {
-          const aRes = await fetch(`/api/availability?user_id=${worker.id}`)
-          const aData = await aRes.json()
-          if (Array.isArray(aData) && aData.length > 0) {
-            avails[worker.id] = aData.map((a: { date_from: string; date_to: string }) => ({
-              date_from: a.date_from,
-              date_to: a.date_to,
-            }))
           }
         } catch { /* ignore */ }
 
@@ -123,39 +86,12 @@ export default function BusinessSearchPage() {
       }
 
       setReviewMap(reviews)
-      setAvailMap(avails)
       setCancelMap(cancels)
     } catch (e) {
       console.error('fetchWorkers error:', e)
       setWorkers([])
     }
     setLoading(false)
-  }
-
-  function getAvailBadge(workerId: string): { label: string; style: string } | null {
-    const avails = availMap[workerId]
-    if (!avails || avails.length === 0) return null
-
-    const today = new Date()
-    const weekLater = new Date()
-    weekLater.setDate(weekLater.getDate() + 7)
-    const todayStr = today.toISOString().split('T')[0]
-    const weekStr = weekLater.toISOString().split('T')[0]
-
-    const hasThisWeek = avails.some(a => a.date_from <= weekStr && a.date_to >= todayStr)
-
-    if (hasThisWeek) {
-      return { label: '📅 今週空き', style: 'bg-green-100 text-green-700' }
-    }
-
-    // 最も近い空き
-    const nearest = avails[0]
-    const from = new Date(nearest.date_from)
-    const to = new Date(nearest.date_to)
-    return {
-      label: `📅 ${from.getMonth() + 1}/${from.getDate()}〜${to.getMonth() + 1}/${to.getDate()}`,
-      style: 'bg-blue-50 text-blue-600',
-    }
   }
 
   return (
@@ -205,25 +141,6 @@ export default function BusinessSearchPage() {
         ))}
       </div>
 
-      {/* 空いてる日で絞り込み */}
-      <div className="mb-3">
-        <label className="block text-xs font-bold text-gray-500 mb-1">📅 空いてる日で絞り込み</label>
-        <input
-          type="date"
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
-        />
-        {dateFilter && (
-          <button
-            onClick={() => setDateFilter('')}
-            className="mt-1 text-xs text-orange-500 font-bold"
-          >
-            日付フィルタをクリア
-          </button>
-        )}
-      </div>
-
       {/* エリアチップ横スクロール */}
       <div ref={scrollRef} className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide -mx-4 px-4">
         <button
@@ -258,7 +175,6 @@ export default function BusinessSearchPage() {
         <div className="space-y-3">
           {workers.map((worker) => {
             const review = reviewMap[worker.id]
-            const availBadge = getAvailBadge(worker.id)
             const cancel = cancelMap[worker.id]
 
             return (
@@ -299,12 +215,6 @@ export default function BusinessSearchPage() {
                         </span>
                       )}
 
-                      {/* 空きバッジ */}
-                      {availBadge && (
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${availBadge.style}`}>
-                          {availBadge.label}
-                        </span>
-                      )}
                     </div>
 
                     {/* キャンセル回数バッジ */}

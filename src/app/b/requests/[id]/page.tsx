@@ -264,8 +264,8 @@ export default function BusinessRequestDetailPage({ params }: { params: Promise<
             <span>エリア: {request.area}</span>
             <span>職種: {request.trade}</span>
             <span>期間: {request.period_start} 〜 {request.period_end}</span>
-            {request.daily_rate && <span>日当: {request.daily_rate.toLocaleString()}円/日</span>}
-            {request.headcount && <span>募集人数: {request.headcount}名</span>}
+            {request.type === 'support' && request.daily_rate && <span>日当: {request.daily_rate.toLocaleString()}円/日</span>}
+            {request.type === 'support' && request.headcount && <span>募集人数: {request.headcount}名</span>}
           </div>
         </div>
 

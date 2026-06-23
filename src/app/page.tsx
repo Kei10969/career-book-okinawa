@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [lineProfile, setLineProfile] = useState<{ userId: string; displayName: string; pictureUrl: string | null } | null>(null)
   const [showTerms, setShowTerms] = useState(false)
   const [termsTab, setTermsTab] = useState<'terms' | 'privacy' | 'law'>('terms')
+  const [showFriendAdd, setShowFriendAdd] = useState(false)
 
   useEffect(() => {
     checkExistingLogin()
@@ -174,33 +175,43 @@ export default function LoginPage() {
 
   async function handleLogin() {
     if (!selectedRole) return
-    setIsLoading(true)
     setError('')
 
     localStorage.setItem('selected_role', selectedRole)
 
     // LINE認証済み（プロフィール取得済み）→ 即登録
     if (lineProfile) {
+      setIsLoading(true)
       await registerUserWithProfile(lineProfile, selectedRole)
       return
     }
 
     // LIFF内ブラウザでログイン済み → 即登録
     if (liffReady && isLiffLoggedIn()) {
+      setIsLoading(true)
       await registerUser(selectedRole)
       return
     }
 
     if (liffReady && isInLiffClient()) {
+      setIsLoading(true)
       await registerUser(selectedRole)
       return
     }
 
-    // 外部ブラウザ → LINE OAuth認証URLに直接リダイレクト
+    // 初回ログイン → 友だち追加画面を表示
+    setShowFriendAdd(true)
+  }
+
+  function proceedToLineAuth() {
+    setShowFriendAdd(false)
+    setIsLoading(true)
+
+    // 外部ブラウザ → LINE OAuth認証URLに直接リダイレクト（bot_prompt=aggressive で友だち追加を促す）
     const channelId = process.env.NEXT_PUBLIC_LIFF_ID?.split('-')[0]
     const redirectUri = encodeURIComponent(window.location.origin)
     const state = Math.random().toString(36).substring(2)
-    const loginUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${channelId}&redirect_uri=${redirectUri}&state=${state}&scope=profile%20openid`
+    const loginUrl = `https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=${channelId}&redirect_uri=${redirectUri}&state=${state}&scope=profile%20openid&bot_prompt=aggressive`
     window.location.href = loginUrl
   }
 
@@ -301,6 +312,49 @@ export default function LoginPage() {
           利用規約・プライバシーポリシー
         </button>
       </div>
+
+      {/* 友だち追加モーダル */}
+      {showFriendAdd && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setShowFriendAdd(false)} />
+          <div className="relative bg-white w-[90%] max-w-sm rounded-3xl overflow-hidden">
+            <div className="bg-[#06C755] px-6 py-5 text-center">
+              <span className="text-5xl">💬</span>
+              <h2 className="text-white font-black text-lg mt-2">公式LINEを友だち追加</h2>
+              <p className="text-white/80 text-xs mt-1">通知を受け取るために追加してください</p>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <p className="text-sm text-gray-600 text-center leading-relaxed">
+                応募やアプローチの通知を<br />LINEで受け取れるようになります。
+              </p>
+
+              <a
+                href="https://line.me/R/ti/p/@559akljn"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full bg-[#06C755] text-white font-black text-base py-3.5 rounded-xl text-center active:scale-[0.98] transition-all"
+              >
+                友だち追加する
+              </a>
+
+              <button
+                onClick={proceedToLineAuth}
+                className="w-full bg-gray-900 text-white font-bold text-sm py-3 rounded-xl active:scale-[0.98] transition-all"
+              >
+                追加したのでログインに進む →
+              </button>
+
+              <button
+                onClick={proceedToLineAuth}
+                className="w-full text-gray-400 text-xs text-center py-1"
+              >
+                あとで追加する（スキップ）
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 利用規約モーダル */}
       {showTerms && (

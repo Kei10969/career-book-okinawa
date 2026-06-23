@@ -74,3 +74,23 @@ export const APPROACH_STATUS_LABEL: Record<string, string> = {
   accepted: '承諾',
   rejected: '辞退',
 }
+
+export const BUSINESS_TYPES = [
+  '総合建設業（ゼネコン）',
+  '土木工事業',
+  '建築工事業',
+  '電気工事業',
+  '管工事業',
+  '鉄筋工事業',
+  '型枠工事業',
+  '足場・鳶工事業',
+  '塗装工事業',
+  '防水工事業',
+  '内装仕上工事業',
+  '左官工事業',
+  '解体工事業',
+  '設備工事業',
+  'リフォーム・リノベーション',
+  '不動産業',
+  'その他',
+] as const

@@ -123,8 +123,12 @@ export default function BusinessProfilePage() {
 
           {profile.description && (
             <div>
-              <p className="text-xs text-gray-400 font-bold mb-1">事業内容</p>
-              <p className="text-sm text-gray-600 bg-gray-50 rounded-xl p-3 whitespace-pre-wrap">{profile.description}</p>
+              <p className="text-xs text-gray-400 font-bold mb-1">業種</p>
+              <p className="text-sm font-bold text-gray-800">
+                <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">
+                  🏗️ {profile.description}
+                </span>
+              </p>
             </div>
           )}
         </div>

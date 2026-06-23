@@ -17,7 +17,7 @@ export default function BusinessNotificationsPage() {
   async function fetchNotifications() {
     const userId = getCurrentUserId()
     try {
-      const res = await fetch(`/api/notifications?user_id=${userId}`)
+      const res = await fetch(`/api/notifications?user_id=${userId}&role=business`)
       const data = await res.json()
       setNotifications(Array.isArray(data) ? data : [])
     } catch (e) {
@@ -29,7 +29,7 @@ export default function BusinessNotificationsPage() {
       await fetch('/api/notifications', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId }),
+        body: JSON.stringify({ user_id: userId, role: 'business' }),
       })
     } catch {}
   }

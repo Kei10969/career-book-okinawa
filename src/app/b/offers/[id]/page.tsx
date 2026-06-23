@@ -40,8 +40,14 @@ export default function BusinessOfferDetailPage({ params }: { params: Promise<{ 
 
   useEffect(() => {
     fetchOffer()
-    checkExistingApproach()
   }, [id])
+
+  // offerが取得できたらアプローチ済みチェック
+  useEffect(() => {
+    if (offer) {
+      checkExistingApproach()
+    }
+  }, [offer])
 
   async function fetchOffer() {
     try {
@@ -57,13 +63,17 @@ export default function BusinessOfferDetailPage({ params }: { params: Promise<{ 
   }
 
   async function checkExistingApproach() {
+    if (!offer) {
+      setCheckingApproach(false)
+      return
+    }
     const userId = getCurrentUserId()
     try {
       const res = await fetch(`/api/approaches?business_user_id=${userId}`)
       if (res.ok) {
         const data = await res.json()
-        const existing = (data as Array<{ worker_user_id: string; status: string }>).find(
-          (a) => a.worker_user_id === offer?.from_user_id && ['pending', 'accepted'].includes(a.status)
+        const existing = (data as Array<{ worker_user_id: string }>).find(
+          (a) => a.worker_user_id === offer.from_user_id
         )
         if (existing) setApproached(true)
       }
@@ -72,23 +82,6 @@ export default function BusinessOfferDetailPage({ params }: { params: Promise<{ 
     }
     setCheckingApproach(false)
   }
-
-  // offerのfrom_user_idが変わったら再チェック
-  useEffect(() => {
-    if (offer) {
-      const userId = getCurrentUserId()
-      fetch(`/api/approaches?business_user_id=${userId}`)
-        .then(res => res.json())
-        .then((data: Array<{ worker_user_id: string; status: string }>) => {
-          const existing = data.find(
-            (a) => a.worker_user_id === offer.from_user_id && ['pending', 'accepted'].includes(a.status)
-          )
-          if (existing) setApproached(true)
-          setCheckingApproach(false)
-        })
-        .catch(() => setCheckingApproach(false))
-    }
-  }, [offer])
 
   async function handleApproach() {
     if (!offer) return
@@ -108,8 +101,8 @@ export default function BusinessOfferDetailPage({ params }: { params: Promise<{ 
 
       if (res.ok) {
         setApproached(true)
-      } else if (res.status === 409) {
-        setApproached(true)
+        alert('アプローチを送信しました')
+        setApproachMessage('')
       } else {
         alert('送信に失敗しました')
       }
@@ -230,30 +223,26 @@ export default function BusinessOfferDetailPage({ params }: { params: Promise<{ 
 
           {/* アプローチセクション */}
           <div className="bg-white rounded-2xl shadow-sm p-4 border border-gray-100">
-            {approached ? (
-              <div className="text-center py-4">
-                <p className="text-green-600 font-bold text-base">✅ アプローチ済み</p>
-                <p className="text-xs text-gray-400 mt-1">職人からの返答をお待ちください</p>
+            {approached && (
+              <div className="bg-green-50 rounded-xl p-2.5 mb-3 text-center">
+                <p className="text-green-700 font-bold text-sm">✅ アプローチ済み</p>
               </div>
-            ) : (
-              <>
-                <h2 className="font-black text-base text-gray-900 mb-3">💬 アプローチする</h2>
-                <textarea
-                  value={approachMessage}
-                  onChange={(e) => setApproachMessage(e.target.value)}
-                  placeholder="メッセージを入力（任意）"
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mb-3 resize-none focus:outline-none focus:ring-2 focus:ring-orange-300"
-                  rows={3}
-                />
-                <PrimaryButton
-                  variant="orange"
-                  onClick={handleApproach}
-                  disabled={sending || checkingApproach}
-                >
-                  {sending ? '送信中...' : '🤝 アプローチする'}
-                </PrimaryButton>
-              </>
             )}
+            <h2 className="font-black text-base text-gray-900 mb-3">💬 {approached ? '再度アプローチする' : 'アプローチする'}</h2>
+            <textarea
+              value={approachMessage}
+              onChange={(e) => setApproachMessage(e.target.value)}
+              placeholder="メッセージを入力（任意）"
+              className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm mb-3 resize-none focus:outline-none focus:ring-2 focus:ring-orange-300"
+              rows={3}
+            />
+            <PrimaryButton
+              variant="orange"
+              onClick={handleApproach}
+              disabled={sending}
+            >
+              {sending ? '送信中...' : '🤝 アプローチする'}
+            </PrimaryButton>
           </div>
         </div>
       )}

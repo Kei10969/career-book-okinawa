@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import PrimaryButton from '@/components/PrimaryButton'
-import { OKINAWA_CITIES } from '@/lib/constants'
+import { OKINAWA_CITIES, BUSINESS_TYPES } from '@/lib/constants'
 import { getCurrentUserId } from '@/lib/auth'
 import type { BusinessProfile } from '@/types/database'
 
@@ -164,14 +164,17 @@ export default function BusinessProfileSetupPage() {
         </div>
 
         <div>
-          <label className={labelClass}>会社紹介</label>
-          <textarea
+          <label className={labelClass}>業種</label>
+          <select
             value={form.description}
             onChange={(e) => updateForm('description', e.target.value)}
-            placeholder="会社の特徴や強みなどを記入"
-            rows={3}
-            className={`${inputClass} resize-none`}
-          />
+            className={inputClass}
+          >
+            <option value="">選択してください</option>
+            {BUSINESS_TYPES.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
         </div>
 
         <PrimaryButton

@@ -25,11 +25,22 @@ export default function NotificationItem({ notification }: NotificationItemProps
   const timeAgo = getTimeAgo(notification.created_at)
   const [expanded, setExpanded] = useState(false)
 
+  const hasProfileLink = !!notification.profile_link
+  const hasLink = !!notification.link
+  const hasBothDifferentLinks = hasProfileLink && hasLink && notification.profile_link !== notification.link
+
   function handleClick() {
     setExpanded(!expanded)
   }
 
-  function handleNavigate(e: React.MouseEvent) {
+  function handleNavigateProfile(e: React.MouseEvent) {
+    e.stopPropagation()
+    if (notification.profile_link) {
+      router.push(notification.profile_link)
+    }
+  }
+
+  function handleNavigateDetail(e: React.MouseEvent) {
     e.stopPropagation()
     if (notification.link) {
       router.push(notification.link)
@@ -81,15 +92,40 @@ export default function NotificationItem({ notification }: NotificationItemProps
             </p>
           </div>
 
-          {/* プロフィールリンク */}
-          {notification.link && (
+          {/* ボタンエリア */}
+          {hasBothDifferentLinks ? (
+            /* profile_link と link が異なる → 2ボタン表示 */
+            <div className="flex gap-2">
+              <button
+                onClick={handleNavigateProfile}
+                className="flex-1 bg-blue-500 text-white font-bold text-sm py-2.5 rounded-xl active:scale-[0.98] transition-all"
+              >
+                👤 プロフィールを見る
+              </button>
+              <button
+                onClick={handleNavigateDetail}
+                className="flex-1 bg-gray-100 text-gray-700 font-bold text-sm py-2.5 rounded-xl active:scale-[0.98] transition-all"
+              >
+                📋 案件詳細を見る
+              </button>
+            </div>
+          ) : hasProfileLink ? (
+            /* profile_link のみ、または link と同じ → プロフィールボタン */
             <button
-              onClick={handleNavigate}
+              onClick={handleNavigateProfile}
               className="w-full bg-blue-500 text-white font-bold text-sm py-2.5 rounded-xl active:scale-[0.98] transition-all"
             >
               👤 相手のプロフィールを見る
             </button>
-          )}
+          ) : hasLink ? (
+            /* link のみ（profile_linkなし、既存通知互換） → 従来ボタン */
+            <button
+              onClick={handleNavigateDetail}
+              className="w-full bg-blue-500 text-white font-bold text-sm py-2.5 rounded-xl active:scale-[0.98] transition-all"
+            >
+              👤 相手のプロフィールを見る
+            </button>
+          ) : null}
         </div>
       )}
     </div>

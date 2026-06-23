@@ -46,6 +46,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       title: 'アプローチが承諾されました！',
       message: `${workerName}さんがアプローチを承諾しました。連絡先: 電話 ${contactPhone} / メール ${contactEmail}`,
       link: `/b/search/${data.worker_user_id}`,
+      profile_link: `/b/search/${data.worker_user_id}`,
+      role: 'business',
       is_read: false,
     })
 
@@ -65,6 +67,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       title: 'アプローチを承諾しました',
       message: '企業への連絡をお待ちください',
       link: `/u/business/${data.business_user_id}`,
+      profile_link: `/u/business/${data.business_user_id}`,
+      role: 'user',
       is_read: false,
     })
 
@@ -85,6 +89,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       title: 'アプローチ結果のお知らせ',
       message: '今回は見送りとなりました',
       link: '/b/home',
+      profile_link: null,
+      role: 'business',
       is_read: false,
     })
 

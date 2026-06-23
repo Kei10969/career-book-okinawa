@@ -76,8 +76,7 @@ export default function WorkerDetailPage() {
       if (res.ok) {
         const data = await res.json()
         const existing = (data || []).find(
-          (a: { worker_user_id: string; status: string }) =>
-            a.worker_user_id === workerId && a.status === 'pending'
+          (a: { worker_user_id: string }) => a.worker_user_id === workerId
         )
         if (existing) setApproached(true)
       }
@@ -104,6 +103,7 @@ export default function WorkerDetailPage() {
       if (res.ok) {
         setApproached(true)
         setShowMessageForm(false)
+        setMessage('')
         alert('アプローチを送信しました')
       } else {
         const err = await res.json()
@@ -235,12 +235,14 @@ export default function WorkerDetailPage() {
               プロフィールを登録する
             </button>
           </div>
-        ) : approached ? (
-          <div className="bg-green-50 rounded-2xl p-4 text-center">
-            <p className="text-green-700 font-bold text-sm">✅ アプローチ済みです</p>
-            <p className="text-green-600 text-xs mt-1">職人の応答をお待ちください</p>
-          </div>
-        ) : showMessageForm ? (
+        ) : (
+          <>
+            {approached && (
+              <div className="bg-green-50 rounded-2xl p-3 mb-2 text-center">
+                <p className="text-green-700 font-bold text-sm">✅ アプローチ済み</p>
+              </div>
+            )}
+            {showMessageForm ? (
           <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">
             <p className="text-sm font-bold text-gray-700">メッセージ（任意）</p>
             <textarea
@@ -261,8 +263,10 @@ export default function WorkerDetailPage() {
           </div>
         ) : (
           <PrimaryButton variant="orange" onClick={() => setShowMessageForm(true)}>
-            🤝 アプローチする
+            🤝 {approached ? '再度アプローチする' : 'アプローチする'}
           </PrimaryButton>
+        )}
+          </>
         )}
       </div>
     </AppShell>

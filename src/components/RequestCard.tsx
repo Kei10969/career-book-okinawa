@@ -23,8 +23,8 @@ export default function RequestCard({ request, linkPrefix }: RequestCardProps) {
         <div className="flex flex-wrap gap-2 text-xs text-gray-500">
           <span>📍 {request.area}</span>
           <span>🔧 {request.trade}</span>
-          {request.daily_rate && <span>💰 {request.daily_rate.toLocaleString()}円/日</span>}
-          {request.headcount && <span>👥 {request.headcount}名</span>}
+          {request.type === 'support' && request.daily_rate && <span>💰 {request.daily_rate.toLocaleString()}円/日</span>}
+          {request.type === 'support' && request.headcount && <span>👥 {request.headcount}名</span>}
         </div>
         <div className="text-xs text-gray-400 mt-2">
           {request.period_start} 〜 {request.period_end}

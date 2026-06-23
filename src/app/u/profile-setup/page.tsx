@@ -322,7 +322,7 @@ export default function UserProfileSetupPage() {
         </div>
 
         <div>
-          <label className={labelClass}>メールアドレス</label>
+          <label className={labelClass}>メールアドレス（任意）</label>
           <input
             type="email"
             value={email}

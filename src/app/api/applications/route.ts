@@ -64,6 +64,9 @@ export async function POST(req: NextRequest) {
         title: '📩 新しい応募が届きました！',
         message: `「${request.title}」に応募がありました。内容を確認してください。`,
         link: `/b/requests/${request.id}`,
+        profile_link: `/b/search/${body.applicant_id}`,
+        related_id: body.applicant_id,
+        role: 'business',
         is_read: false,
       })
 
@@ -115,6 +118,8 @@ export async function PATCH(req: NextRequest) {
         title: '応募が成立しました！',
         message: `「${request.title}」への応募が承認されました。企業からの連絡をお待ちください。`,
         link: `/u/business/${request.user_id}`,
+        profile_link: `/u/business/${request.user_id}`,
+        role: 'user',
       })
 
       // 企業に通知（連絡先付き）→ 職人プロフィールへリンク
@@ -129,6 +134,8 @@ export async function PATCH(req: NextRequest) {
         title: '応募が成立しました！',
         message: `「${request.title}」への応募者（${applicant.display_name}）と成立しました。${contactInfo ? `連絡先: ${contactInfo}` : '連絡先が未登録です。'}`,
         link: `/b/search/${applicant.id}`,
+        profile_link: `/b/search/${applicant.id}`,
+        role: 'business',
       })
 
       // LINE プッシュ通知: 職人へ
@@ -176,6 +183,8 @@ export async function PATCH(req: NextRequest) {
         title: '応募結果のお知らせ',
         message: `「${request.title}」への応募は、今回は見送りとなりました。`,
         link: `/u/mypage`,
+        profile_link: null,
+        role: 'user',
       })
 
       // 企業に通知
@@ -185,6 +194,8 @@ export async function PATCH(req: NextRequest) {
         title: '応募を却下しました',
         message: `「${request.title}」への応募者（${applicant.display_name}）を却下しました。`,
         link: `/b/requests/${request.id}`,
+        profile_link: `/b/search/${applicant.id}`,
+        role: 'business',
       })
 
       // LINE プッシュ通知: 職人へ
