@@ -414,12 +414,23 @@ export default function BusinessHomePage() {
                     className="bg-white rounded-2xl shadow-sm p-4 border border-gray-100 cursor-pointer active:scale-[0.99] transition-all"
                     onClick={() => router.push(`/b/offers/${offer.id}`)}
                   >
-                    <div className="flex items-center gap-2.5 mb-2">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm">👤</div>
-                      <div>
-                        <p className="font-bold text-sm text-gray-800">{offer.user?.display_name || '匿名職人'}</p>
-                        <p className="text-[10px] text-gray-400">{new Date(offer.created_at).toLocaleDateString('ja-JP')}</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm">👤</div>
+                        <div>
+                          <p className="font-bold text-sm text-gray-800">{offer.user?.display_name || '匿名職人'}</p>
+                          <p className="text-[10px] text-gray-400">{new Date(offer.created_at).toLocaleDateString('ja-JP')}</p>
+                        </div>
                       </div>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        offer.status === 'matched' ? 'bg-green-100 text-green-700' :
+                        offer.status === 'open' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-500'
+                      }`}>
+                        {offer.status === 'matched' ? '✅ 成立済み' :
+                         offer.status === 'open' ? '募集中' :
+                         offer.status === 'closed' ? '終了' : offer.status}
+                      </span>
                     </div>
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       <span className="bg-blue-100 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full">{offer.trade}</span>

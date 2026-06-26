@@ -142,7 +142,18 @@ export default function BusinessOfferDetailPage({ params }: { params: Promise<{ 
         <div className="space-y-4">
           {/* オファー内容 */}
           <div className="bg-white rounded-2xl shadow-sm p-4 border border-gray-100">
-            <h2 className="font-black text-base text-gray-900 mb-3">📋 オファー内容</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-black text-base text-gray-900">📋 オファー内容</h2>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                offer.status === 'matched' ? 'bg-green-100 text-green-700' :
+                offer.status === 'open' ? 'bg-blue-100 text-blue-700' :
+                'bg-gray-100 text-gray-500'
+              }`}>
+                {offer.status === 'matched' ? '✅ 成立済み' :
+                 offer.status === 'open' ? '募集中' :
+                 offer.status === 'closed' ? '終了' : offer.status}
+              </span>
+            </div>
             <div className="space-y-2">
               <div className="flex flex-wrap gap-1.5">
                 <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">{offer.trade}</span>
