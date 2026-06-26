@@ -166,6 +166,15 @@ export default function BusinessHomePage() {
 
       if (status === 'approved') {
         alert('✅ 成立しました！応募者の連絡先が表示されます。')
+        // requestのステータスがclosedに変わった可能性があるので再取得
+        const userId = getCurrentUserId()
+        const [reqRes, allReqRes] = await Promise.all([
+          fetch(`/api/requests?user_id=${userId}&status=all`),
+          fetch('/api/requests?status=all'),
+        ])
+        const [reqData, allReqData] = await Promise.all([reqRes.json(), allReqRes.json()])
+        setRequests(Array.isArray(reqData) ? reqData : [])
+        setAllRequests(Array.isArray(allReqData) ? allReqData : [])
       } else {
         alert('応募を却下しました。両者に通知が送信されました。')
       }
