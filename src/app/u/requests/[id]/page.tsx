@@ -10,7 +10,7 @@ import { getCurrentUserId } from '@/lib/auth'
 export default function UserRequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
-  const [request, setRequest] = useState<Request | null>(null)
+  const [request, setRequest] = useState<(Request & { user?: { display_name?: string; company_name?: string } }) | null>(null)
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -153,7 +153,12 @@ export default function UserRequestDetailPage({ params }: { params: Promise<{ id
         {/* バッジ */}
         <div className="flex items-center gap-2">
           <RoleBadge type={request.type} />
-          {request.is_urgent && (
+          {request.status === 'closed' && (
+            <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">
+              ✅ 成立済み
+            </span>
+          )}
+          {request.status !== 'closed' && request.is_urgent && (
             <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">
               🔥 急募
             </span>
@@ -162,6 +167,11 @@ export default function UserRequestDetailPage({ params }: { params: Promise<{ id
 
         {/* タイトル */}
         <h1 className="text-xl font-black text-gray-900">{request.title}</h1>
+
+        {/* 企業名 */}
+        {(request.user?.company_name || request.user?.display_name) && (
+          <p className="text-sm text-gray-500">🏢 {request.user.company_name || request.user.display_name}</p>
+        )}
 
         {/* 詳細情報 */}
         <div className="bg-white rounded-2xl shadow-sm p-4 space-y-3">

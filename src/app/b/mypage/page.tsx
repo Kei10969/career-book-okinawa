@@ -30,7 +30,7 @@ export default function BusinessMyPage() {
     const userId = getCurrentUserId()
     const [profileRes, reqRes] = await Promise.all([
       fetch(`/api/business-profiles?user_id=${userId}`),
-      fetch(`/api/requests?user_id=${userId}`),
+      fetch(`/api/requests?user_id=${userId}&status=all`),
     ])
 
     const profileData = await profileRes.json()
@@ -91,7 +91,7 @@ export default function BusinessMyPage() {
     } else {
       alert('削除に失敗しました')
       // 失敗時はデータを再取得して最新状態に
-      const reqRes = await fetch(`/api/requests?user_id=${userId}`)
+      const reqRes = await fetch(`/api/requests?user_id=${userId}&status=all`)
       const reqData = await reqRes.json()
       setRequests(Array.isArray(reqData) ? reqData : [])
     }

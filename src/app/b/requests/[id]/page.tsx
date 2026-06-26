@@ -130,6 +130,10 @@ export default function BusinessRequestDetailPage({ params }: { params: Promise<
         const contact = result.applicant_contact
         const info = [contact?.phone, contact?.email].filter(Boolean).join(' / ')
         alert(`✅ 成立しました！\n連絡先: ${info || '未登録'}`)
+        // requestのステータスが変わった可能性があるので再取得
+        const reqRes = await fetch(`/api/requests/${id}`)
+        const reqData = await reqRes.json()
+        setRequest(reqData)
       } else if (status === 'rejected') {
         alert('応募を却下しました。両者に通知が送信されました。')
       }
@@ -253,7 +257,12 @@ export default function BusinessRequestDetailPage({ params }: { params: Promise<
         <div className="bg-white rounded-2xl shadow-sm p-4">
           <div className="flex items-center gap-2 mb-2">
             <RoleBadge type={request.type} />
-            {request.is_urgent && (
+            {request.status === 'closed' && (
+              <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">
+                ✅ 成立済み
+              </span>
+            )}
+            {request.status !== 'closed' && request.is_urgent && (
               <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">
                 🔥 急募
               </span>

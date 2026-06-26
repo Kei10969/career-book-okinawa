@@ -164,6 +164,37 @@ export async function PATCH(req: NextRequest) {
         )
       }
 
+      // 成立時: requestのステータスを自動で closed にする判定
+      // 下請け → 1件承認で即closed
+      // 応援 → 承認数が募集人数(headcount)以上で closed
+      if (request) {
+        const { data: reqDetail } = await supabase
+          .from('requests')
+          .select('type, headcount, status')
+          .eq('id', request.id)
+          .single()
+
+        if (reqDetail && reqDetail.status === 'open') {
+          if (reqDetail.type === 'subcontract') {
+            // 下請けは1件成立で closed
+            await supabase.from('requests').update({ status: 'closed' }).eq('id', request.id)
+          } else if (reqDetail.type === 'support') {
+            // 応援は承認数 >= headcount で closed
+            const { count } = await supabase
+              .from('applications')
+              .select('id', { count: 'exact', head: true })
+              .eq('request_id', request.id)
+              .eq('status', 'approved')
+
+            const approvedCount = count || 0
+            const headcount = reqDetail.headcount || 1
+            if (approvedCount >= headcount) {
+              await supabase.from('requests').update({ status: 'closed' }).eq('id', request.id)
+            }
+          }
+        }
+      }
+
       // レスポンスに連絡先を含める
       return NextResponse.json({
         ...data,

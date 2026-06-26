@@ -13,11 +13,21 @@ export async function GET(req: NextRequest) {
   const trade = req.nextUrl.searchParams.get('trade')
   const userId = req.nextUrl.searchParams.get('user_id')
 
+  const status = req.nextUrl.searchParams.get('status')
+
   let query = supabase
     .from('requests')
     .select('*, user:users(display_name, company_name, type)')
-    .eq('status', 'open')
     .order('created_at', { ascending: false })
+
+  // デフォルトはopenのみ、status=allで全件取得
+  if (status === 'all') {
+    // フィルターなし
+  } else if (status) {
+    query = query.eq('status', status)
+  } else {
+    query = query.eq('status', 'open')
+  }
 
   if (type && type !== 'all') query = query.eq('type', type)
   if (area && area !== 'all') query = query.eq('area', area)

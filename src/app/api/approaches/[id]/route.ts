@@ -72,6 +72,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       is_read: false,
     })
 
+    // 承諾時: 職人のオファー(open)を matched にする
+    await supabase
+      .from('offers')
+      .update({ status: 'matched', updated_at: new Date().toISOString() })
+      .eq('from_user_id', data.worker_user_id)
+      .eq('status', 'open')
+
     // 承諾時は職人の連絡先をレスポンスに含める
     return NextResponse.json({
       ...data,

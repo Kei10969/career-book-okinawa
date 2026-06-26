@@ -74,9 +74,9 @@ export default function BusinessHomePage() {
     try {
       // ========= Phase 1: 並列で独立データを一括取得 =========
       const [reqRes, appsRes, allReqRes, offersRes] = await Promise.all([
-        fetch(`/api/requests?user_id=${userId}`),
+        fetch(`/api/requests?user_id=${userId}&status=all`),
         fetch(`/api/applications?owner_user_id=${userId}`),
-        fetch('/api/requests'),
+        fetch('/api/requests?status=all'),
         fetch('/api/offers'),
       ])
 
