@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import EmptyState from '@/components/EmptyState'
@@ -39,8 +39,6 @@ export default function BusinessSearchPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [reviewMap, setReviewMap] = useState<Record<string, ReviewInfo>>({})
   const [cancelMap, setCancelMap] = useState<Record<string, { late: number; no_show: number }>>({})
-  const scrollRef = useRef<HTMLDivElement>(null)
-
   useEffect(() => {
     fetchWorkers()
   }, [tradeFilter, areaFilter, statusFilter])
@@ -141,32 +139,22 @@ export default function BusinessSearchPage() {
         ))}
       </div>
 
-      {/* エリアチップ横スクロール */}
-      <div ref={scrollRef} className="flex gap-2 overflow-x-auto pb-3 mb-4 scrollbar-hide -mx-4 px-4">
-        <button
-          onClick={() => setAreaFilter('all')}
-          className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-            areaFilter === 'all' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'
-          }`}
+      {/* エリアフィルター */}
+      <div className="mb-4">
+        <select
+          value={areaFilter}
+          onChange={(e) => setAreaFilter(e.target.value)}
+          className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
         >
-          全エリア
-        </button>
-        {OKINAWA_AREA_GROUPS.map((group) => (
-          <div key={group.label} className="flex items-center gap-2 flex-shrink-0">
-            <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">{group.label}</span>
-            {group.cities.map((city) => (
-              <button
-                key={city}
-                onClick={() => setAreaFilter(city)}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  areaFilter === city ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'
-                }`}
-              >
-                {city}
-              </button>
-            ))}
-          </div>
-        ))}
+          <option value="all">全エリア</option>
+          {OKINAWA_AREA_GROUPS.map((group) => (
+            <optgroup key={group.label} label={group.label}>
+              {group.cities.map((city) => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
       </div>
 
       {/* 検索結果 */}
