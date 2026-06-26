@@ -4,13 +4,35 @@ export const TRADES = [
   '解体工事', '土木作業', 'クレーン', '重機オペ', 'その他'
 ] as const
 
-export const OKINAWA_CITIES = [
-  '那覇市', '浦添市', '宜野湾市', '沖縄市', 'うるま市',
-  '名護市', '糸満市', '豊見城市', '南城市', '読谷村',
-  '嘉手納町', '北谷町', '北中城村', '中城村', '西原町',
-  '与那原町', '南風原町', '八重瀬町', '大宜味村', '国頭村',
-  '東村', '今帰仁村', '本部町', '恩納村'
+export const OKINAWA_AREA_GROUPS = [
+  {
+    label: '南部',
+    cities: ['那覇市', '糸満市', '豊見城市', '南城市', '与那原町', '南風原町', '八重瀬町'],
+  },
+  {
+    label: '中部',
+    cities: ['浦添市', '宜野湾市', '沖縄市', 'うるま市', '読谷村', '嘉手納町', '北谷町', '北中城村', '中城村', '西原町'],
+  },
+  {
+    label: '北部',
+    cities: ['名護市', '国頭村', '大宜味村', '東村', '今帰仁村', '本部町', '恩納村', '宜野座村', '金武町', '伊江村'],
+  },
+  {
+    label: '宮古',
+    cities: ['宮古島市', '多良間村'],
+  },
+  {
+    label: '八重山',
+    cities: ['石垣市', '竹富町', '与那国町'],
+  },
+  {
+    label: '離島',
+    cities: ['久米島町', '渡嘉敷村', '座間味村', '粟国村', '渡名喜村', '伊平屋村', '伊是名村', '南大東村', '北大東村'],
+  },
 ] as const
+
+// 後方互換用フラット配列（全41市町村）
+export const OKINAWA_CITIES = OKINAWA_AREA_GROUPS.flatMap(g => [...g.cities]) as unknown as readonly string[]
 
 export const REQUEST_TYPE_LABEL: Record<string, string> = {
   support: '応援',

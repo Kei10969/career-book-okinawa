@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import EmptyState from '@/components/EmptyState'
-import { TRADES, OKINAWA_CITIES, JOB_STATUS, JOB_STATUS_LABEL } from '@/lib/constants'
+import { TRADES, OKINAWA_AREA_GROUPS, JOB_STATUS, JOB_STATUS_LABEL } from '@/lib/constants'
 
 interface WorkerProfile {
   id: string
@@ -151,16 +151,21 @@ export default function BusinessSearchPage() {
         >
           全エリア
         </button>
-        {OKINAWA_CITIES.map((city) => (
-          <button
-            key={city}
-            onClick={() => setAreaFilter(city)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-              areaFilter === city ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'
-            }`}
-          >
-            {city}
-          </button>
+        {OKINAWA_AREA_GROUPS.map((group) => (
+          <div key={group.label} className="flex items-center gap-2 flex-shrink-0">
+            <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">{group.label}</span>
+            {group.cities.map((city) => (
+              <button
+                key={city}
+                onClick={() => setAreaFilter(city)}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  areaFilter === city ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {city}
+              </button>
+            ))}
+          </div>
         ))}
       </div>
 

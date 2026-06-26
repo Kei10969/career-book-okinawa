@@ -6,7 +6,7 @@ import RequestCard from '@/components/RequestCard'
 import EmptyState from '@/components/EmptyState'
 import { getCurrentUserId } from '@/lib/auth'
 import { logoutFromLine } from '@/lib/liff'
-import { OKINAWA_CITIES, BUSINESS_TYPES } from '@/lib/constants'
+import { OKINAWA_AREA_GROUPS, BUSINESS_TYPES } from '@/lib/constants'
 import type { BusinessProfile, Request } from '@/types/database'
 
 export default function BusinessMyPage() {
@@ -165,8 +165,12 @@ export default function BusinessMyPage() {
                   className={inputClass}
                 >
                   <option value="">選択してください</option>
-                  {OKINAWA_CITIES.map((city) => (
-                    <option key={city} value={city}>{city}</option>
+                  {OKINAWA_AREA_GROUPS.map((group) => (
+                    <optgroup key={group.label} label={group.label}>
+                      {group.cities.map((city) => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </div>

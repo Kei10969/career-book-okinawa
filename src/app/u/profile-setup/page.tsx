@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import PrimaryButton from '@/components/PrimaryButton'
-import { TRADES, OKINAWA_CITIES, QUALIFICATIONS, EXPERIENCE_YEARS, DESIRED_SALARY, JOB_STATUS } from '@/lib/constants'
+import { TRADES, OKINAWA_AREA_GROUPS, QUALIFICATIONS, EXPERIENCE_YEARS, DESIRED_SALARY, JOB_STATUS } from '@/lib/constants'
 import { getCurrentUserId } from '@/lib/auth'
 
 export default function UserProfileSetupPage() {
@@ -207,20 +207,27 @@ export default function UserProfileSetupPage() {
         {/* 希望エリア */}
         <div>
           <label className={labelClass}>希望エリア（複数選択可）</label>
-          <div className="flex flex-wrap gap-2">
-            {OKINAWA_CITIES.map((city) => (
-              <button
-                key={city}
-                type="button"
-                onClick={() => toggleArea(city)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                  areas.includes(city)
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-500'
-                }`}
-              >
-                {city}
-              </button>
+          <div className="space-y-3">
+            {OKINAWA_AREA_GROUPS.map((group) => (
+              <div key={group.label}>
+                <p className="text-xs font-bold text-gray-500 mb-1">{group.label}</p>
+                <div className="flex flex-wrap gap-2">
+                  {group.cities.map((city) => (
+                    <button
+                      key={city}
+                      type="button"
+                      onClick={() => toggleArea(city)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                        areas.includes(city)
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {city}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </div>

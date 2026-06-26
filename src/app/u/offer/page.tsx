@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import PrimaryButton from '@/components/PrimaryButton'
-import { OKINAWA_CITIES, TRADES } from '@/lib/constants'
+import { OKINAWA_AREA_GROUPS, TRADES } from '@/lib/constants'
 import { getCurrentUserId } from '@/lib/auth'
 import ProfileGuard from '@/components/ProfileGuard'
 
@@ -79,8 +79,12 @@ function UserOfferForm() {
             className={inputClass}
           >
             <option value="">選択してください</option>
-            {OKINAWA_CITIES.map((city) => (
-              <option key={city} value={city}>{city}</option>
+            {OKINAWA_AREA_GROUPS.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.cities.map((city) => (
+                  <option key={city} value={city}>{city}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </div>
