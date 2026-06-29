@@ -211,6 +211,21 @@ export default function BusinessHomePage() {
             <SummaryCard icon="🤝" label="成立" value={stats.matched} color="text-green-600" />
           </div>
 
+          {/* 空き状況リンク */}
+          <button
+            onClick={() => router.push('/b/availability')}
+            className="w-full bg-white rounded-2xl shadow-sm p-4 border border-gray-100 flex items-center justify-between active:scale-[0.99] transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">📅</span>
+              <div className="text-left">
+                <p className="font-bold text-sm text-gray-800">空き状況を設定</p>
+                <p className="text-[11px] text-gray-400">自社の空き期間を登録して仕事を受けやすく</p>
+              </div>
+            </div>
+            <span className="text-gray-300 text-lg">›</span>
+          </button>
+
           {/* オファー一覧 */}
           <div>
             <h2 className="font-bold text-sm text-gray-500 mb-3 flex items-center gap-2">

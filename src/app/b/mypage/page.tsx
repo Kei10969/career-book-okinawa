@@ -226,6 +226,21 @@ export default function BusinessMyPage() {
             </div>
           ) : null}
 
+          {/* 空き状況管理リンク */}
+          <button
+            onClick={() => window.location.href = '/b/availability'}
+            className="w-full bg-white rounded-2xl shadow-sm p-4 border border-gray-100 flex items-center justify-between active:scale-[0.99] transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">📅</span>
+              <div className="text-left">
+                <p className="font-bold text-sm text-gray-800">空き状況管理</p>
+                <p className="text-[11px] text-gray-400">自社の空き期間を登録・管理する</p>
+              </div>
+            </div>
+            <span className="text-gray-300 text-lg">›</span>
+          </button>
+
           {/* 投稿履歴 */}
           <div>
             <h2 className="font-bold text-sm text-gray-500 mb-2">📝 投稿履歴</h2>
