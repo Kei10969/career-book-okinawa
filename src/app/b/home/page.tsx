@@ -123,11 +123,9 @@ export default function BusinessHomePage() {
       setAllRequests(Array.isArray(allReqData) ? allReqData : [])
       setWorkerOffers(Array.isArray(offersData) ? offersData : [])
 
-      // 空きのある企業一覧（自社除く）
+      // 空きのある企業一覧
       const availBizData = await availBizRes.json()
-      const filtered = Array.isArray(availBizData)
-        ? availBizData.filter((a: { user_id: string }) => a.user_id !== userId)
-        : []
+      const filtered = Array.isArray(availBizData) ? availBizData : []
       // user_idで重複排除（最も直近の空き情報だけ表示）
       const seen = new Set<string>()
       const unique = filtered.filter((a: { user_id: string }) => {
