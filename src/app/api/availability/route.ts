@@ -10,6 +10,10 @@ export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get('user_id')
   const date = req.nextUrl.searchParams.get('date')
   const includeUser = req.nextUrl.searchParams.get('include_user')
+  const includeBusinessProfile = req.nextUrl.searchParams.get('include_business_profile')
+  const businessOnly = req.nextUrl.searchParams.get('business_only')
+  const area = req.nextUrl.searchParams.get('area')
+  const businessType = req.nextUrl.searchParams.get('business_type')
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -34,6 +38,75 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query.order('date_from', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // 企業プロフィール付きで返す場合
+  if (includeBusinessProfile === 'true' || businessOnly === 'true') {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows = (data || []) as any[]
+    const userIds = [...new Set(rows.map((d) => d.user_id as string))]
+
+    if (userIds.length === 0) {
+      const response = NextResponse.json([])
+      response.headers.set('Cache-Control', 'private, no-cache, no-store')
+      return response
+    }
+
+    // 企業ユーザーのみフィルタ（roleがbusiness）
+    const { data: users } = await supabase
+      .from('users')
+      .select('id, role')
+      .in('id', userIds)
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const businessUserIds = ((users || []) as any[])
+      .filter((u) => u.role === 'business')
+      .map((u) => u.id as string)
+
+    if (businessOnly === 'true' && businessUserIds.length === 0) {
+      const response = NextResponse.json([])
+      response.headers.set('Cache-Control', 'private, no-cache, no-store')
+      return response
+    }
+
+    // 企業プロフィールを取得
+    const { data: profiles } = await supabase
+      .from('business_profiles')
+      .select('*')
+      .in('user_id', businessUserIds.length > 0 ? businessUserIds : ['__none__'])
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const profileMap: Record<string, any> = {}
+    for (const p of (profiles || []) as any[]) {
+      profileMap[p.user_id] = p
+    }
+
+    let enriched = rows
+      .filter((d) =>
+        businessOnly === 'true' ? businessUserIds.includes(d.user_id) : true
+      )
+      .map((d) => ({
+        ...d,
+        business_profile: profileMap[d.user_id] || null,
+      }))
+
+    // エリアフィルタ
+    if (area) {
+      enriched = enriched.filter((d) =>
+        d.business_profile?.area === area
+      )
+    }
+
+    // 業種フィルタ
+    if (businessType) {
+      enriched = enriched.filter((d) =>
+        d.business_profile?.description === businessType
+      )
+    }
+
+    const response = NextResponse.json(enriched)
+    response.headers.set('Cache-Control', 'private, no-cache, no-store')
+    return response
+  }
 
   const response = NextResponse.json(data)
   response.headers.set('Cache-Control', 'private, no-cache, no-store')

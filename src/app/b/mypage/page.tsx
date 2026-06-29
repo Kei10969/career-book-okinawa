@@ -241,6 +241,21 @@ export default function BusinessMyPage() {
             <span className="text-gray-300 text-lg">›</span>
           </button>
 
+          {/* 企業アプローチ管理リンク */}
+          <button
+            onClick={() => window.location.href = '/b/approaches'}
+            className="w-full bg-white rounded-2xl shadow-sm p-4 border border-gray-100 flex items-center justify-between active:scale-[0.99] transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🤝</span>
+              <div className="text-left">
+                <p className="font-bold text-sm text-gray-800">企業アプローチ管理</p>
+                <p className="text-[11px] text-gray-400">送受信したアプローチを確認・管理する</p>
+              </div>
+            </div>
+            <span className="text-gray-300 text-lg">›</span>
+          </button>
+
           {/* 投稿履歴 */}
           <div>
             <h2 className="font-bold text-sm text-gray-500 mb-2">📝 投稿履歴</h2>

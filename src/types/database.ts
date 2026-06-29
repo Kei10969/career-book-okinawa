@@ -133,6 +133,20 @@ export interface Notification {
   created_at: string
 }
 
+export type BusinessApproachStatus = 'pending' | 'accepted' | 'rejected'
+
+export interface BusinessApproach {
+  id: string
+  from_business_id: string
+  to_business_id: string
+  message: string | null
+  status: BusinessApproachStatus
+  created_at: string
+  updated_at: string
+  from_profile?: BusinessProfile
+  to_profile?: BusinessProfile
+}
+
 export type CancelType = 'normal' | 'late' | 'no_show'
 
 export interface Cancellation {

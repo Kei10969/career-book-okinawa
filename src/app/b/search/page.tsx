@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import EmptyState from '@/components/EmptyState'
-import { TRADES, OKINAWA_AREA_GROUPS, JOB_STATUS, JOB_STATUS_LABEL } from '@/lib/constants'
+import { TRADES, OKINAWA_AREA_GROUPS, JOB_STATUS, JOB_STATUS_LABEL, BUSINESS_TYPES } from '@/lib/constants'
+import type { Availability, BusinessProfile } from '@/types/database'
 
 interface WorkerProfile {
   id: string
@@ -32,6 +33,7 @@ const JOB_STATUS_BADGE: Record<string, string> = {
 
 export default function BusinessSearchPage() {
   const router = useRouter()
+  const [searchMode, setSearchMode] = useState<'workers' | 'companies'>('workers')
   const [workers, setWorkers] = useState<WorkerProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [tradeFilter, setTradeFilter] = useState('all')
@@ -39,9 +41,20 @@ export default function BusinessSearchPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [reviewMap, setReviewMap] = useState<Record<string, ReviewInfo>>({})
   const [cancelMap, setCancelMap] = useState<Record<string, { late: number; no_show: number }>>({})
+
+  // 企業検索用
+  const [bizLoading, setBizLoading] = useState(false)
+  const [bizAreaFilter, setBizAreaFilter] = useState('all')
+  const [bizTypeFilter, setBizTypeFilter] = useState('all')
+  const [availableBusinesses, setAvailableBusinesses] = useState<(Availability & { business_profile: BusinessProfile | null })[]>([])
+
   useEffect(() => {
-    fetchWorkers()
-  }, [tradeFilter, areaFilter, statusFilter])
+    if (searchMode === 'workers') {
+      fetchWorkers()
+    } else {
+      fetchBusinesses()
+    }
+  }, [searchMode, tradeFilter, areaFilter, statusFilter, bizAreaFilter, bizTypeFilter])
 
   async function fetchWorkers() {
     setLoading(true)
@@ -92,16 +105,151 @@ export default function BusinessSearchPage() {
     setLoading(false)
   }
 
+  async function fetchBusinesses() {
+    setBizLoading(true)
+    try {
+      const params = new URLSearchParams({
+        business_only: 'true',
+        include_business_profile: 'true',
+      })
+      if (bizAreaFilter !== 'all') params.set('area', bizAreaFilter)
+      if (bizTypeFilter !== 'all') params.set('business_type', bizTypeFilter)
+
+      const res = await fetch(`/api/availability?${params}`)
+      const data = await res.json()
+      const list = Array.isArray(data) ? data : []
+
+      // user_idで重複排除
+      const seen = new Set<string>()
+      const unique = list.filter((a: { user_id: string }) => {
+        if (seen.has(a.user_id)) return false
+        seen.add(a.user_id)
+        return true
+      })
+      setAvailableBusinesses(unique)
+    } catch (e) {
+      console.error('fetchBusinesses error:', e)
+      setAvailableBusinesses([])
+    }
+    setBizLoading(false)
+  }
+
   return (
     <AppShell
       role="business"
       header={
         <div className="flex items-center gap-2">
           <span className="text-2xl">🔍</span>
-          <h1 className="font-black text-lg text-gray-900">人材検索</h1>
+          <h1 className="font-black text-lg text-gray-900">検索</h1>
         </div>
       }
     >
+      {/* 検索モード切替 */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => setSearchMode('workers')}
+          className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+            searchMode === 'workers' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-500'
+          }`}
+        >
+          👷 人材検索
+        </button>
+        <button
+          onClick={() => setSearchMode('companies')}
+          className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all ${
+            searchMode === 'companies' ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-500'
+          }`}
+        >
+          🏢 空き企業検索
+        </button>
+      </div>
+
+      {searchMode === 'companies' ? (
+        <>
+          {/* 業種フィルター */}
+          <div className="mb-3">
+            <select
+              value={bizTypeFilter}
+              onChange={(e) => setBizTypeFilter(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+            >
+              <option value="all">全業種</option>
+              {BUSINESS_TYPES.map((type) => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* エリアフィルター */}
+          <div className="mb-4">
+            <select
+              value={bizAreaFilter}
+              onChange={(e) => setBizAreaFilter(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-white"
+            >
+              <option value="all">全エリア</option>
+              {OKINAWA_AREA_GROUPS.map((group) => (
+                <optgroup key={group.label} label={group.label}>
+                  {group.cities.map((city) => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+
+          {/* 企業検索結果 */}
+          {bizLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full" />
+            </div>
+          ) : availableBusinesses.length === 0 ? (
+            <EmptyState icon="🏢" title="空きのある企業が見つかりません" description="条件を変更して検索してみてください" />
+          ) : (
+            <div className="space-y-3">
+              {availableBusinesses.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => router.push(`/b/company/${item.user_id}`)}
+                  className="w-full bg-white rounded-2xl shadow-sm p-4 text-left active:bg-gray-50 transition-colors border border-gray-100"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 rounded-xl bg-orange-100 flex items-center justify-center text-xl flex-shrink-0">
+                      🏢
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-sm text-gray-900">
+                        {item.business_profile?.company_name || '企業'}
+                      </p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {item.business_profile?.description && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                            {item.business_profile.description}
+                          </span>
+                        )}
+                        {item.business_profile?.area && (
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                            📍 {item.business_profile.area}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-green-600 font-bold mt-1">
+                        📅 {new Date(item.date_from + 'T00:00:00').toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
+                        〜{new Date(item.date_to + 'T00:00:00').toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })} 空き
+                      </p>
+                      {item.note && (
+                        <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-1">💬 {item.note}</p>
+                      )}
+                    </div>
+                    <span className="text-gray-300 text-lg self-center">›</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+      <>
       {/* 職種フィルター */}
       <div className="mb-3">
         <select
@@ -255,6 +403,8 @@ export default function BusinessSearchPage() {
             )
           })}
         </div>
+      )}
+      </>
       )}
     </AppShell>
   )

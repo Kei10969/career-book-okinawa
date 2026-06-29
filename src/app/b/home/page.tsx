@@ -5,7 +5,7 @@ import SummaryCard from '@/components/SummaryCard'
 import RequestCard from '@/components/RequestCard'
 import EmptyState from '@/components/EmptyState'
 import StatusBadge from '@/components/StatusBadge'
-import type { Request } from '@/types/database'
+import type { Request, Availability, BusinessProfile } from '@/types/database'
 import { useRouter } from 'next/navigation'
 import { getCurrentUserId } from '@/lib/auth'
 
@@ -61,6 +61,8 @@ export default function BusinessHomePage() {
   const [reqTab, setReqTab] = useState<'all' | 'support' | 'subcontract'>('all')
   const [reviewedApps, setReviewedApps] = useState<Set<string>>(new Set())
   const [reviewSummaries, setReviewSummaries] = useState<ReviewSummaryMap>({})
+  const [availableBusinesses, setAvailableBusinesses] = useState<(Availability & { business_profile: BusinessProfile | null })[]>([])
+  const [approachCount, setApproachCount] = useState(0)
 
   useEffect(() => {
     const stored = localStorage.getItem('user_nickname') || localStorage.getItem('user_name') || ''
@@ -73,11 +75,13 @@ export default function BusinessHomePage() {
 
     try {
       // ========= Phase 1: 並列で独立データを一括取得 =========
-      const [reqRes, appsRes, allReqRes, offersRes] = await Promise.all([
+      const [reqRes, appsRes, allReqRes, offersRes, availBizRes, approachReceivedRes] = await Promise.all([
         fetch(`/api/requests?user_id=${userId}&status=all`),
         fetch(`/api/applications?owner_user_id=${userId}`),
         fetch('/api/requests?status=all'),
         fetch('/api/offers'),
+        fetch('/api/availability?business_only=true&include_business_profile=true'),
+        fetch(`/api/business-approaches?to_business_id=${userId}`),
       ])
 
       const [reqData, appsData, allReqData, offersData] = await Promise.all([
@@ -118,6 +122,27 @@ export default function BusinessHomePage() {
       })
       setAllRequests(Array.isArray(allReqData) ? allReqData : [])
       setWorkerOffers(Array.isArray(offersData) ? offersData : [])
+
+      // 空きのある企業一覧（自社除く）
+      const availBizData = await availBizRes.json()
+      const filtered = Array.isArray(availBizData)
+        ? availBizData.filter((a: { user_id: string }) => a.user_id !== userId)
+        : []
+      // user_idで重複排除（最も直近の空き情報だけ表示）
+      const seen = new Set<string>()
+      const unique = filtered.filter((a: { user_id: string }) => {
+        if (seen.has(a.user_id)) return false
+        seen.add(a.user_id)
+        return true
+      })
+      setAvailableBusinesses(unique)
+
+      // 受信アプローチ数
+      const approachReceivedData = await approachReceivedRes.json()
+      const pendingApproaches = Array.isArray(approachReceivedData)
+        ? approachReceivedData.filter((a: { status: string }) => a.status === 'pending').length
+        : 0
+      setApproachCount(pendingApproaches)
 
       // ========= Phase 2: 評価データ一括取得（並列） =========
       const applicantIds = [...new Set(allApps.map(a => a.applicant_id || a.applicant?.id).filter(Boolean))] as string[]
@@ -225,6 +250,75 @@ export default function BusinessHomePage() {
             </div>
             <span className="text-gray-300 text-lg">›</span>
           </button>
+
+          {/* 企業アプローチ管理リンク */}
+          {approachCount > 0 && (
+            <button
+              onClick={() => router.push('/b/approaches')}
+              className="w-full bg-orange-50 border border-orange-200 rounded-2xl shadow-sm p-4 flex items-center justify-between active:scale-[0.99] transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🤝</span>
+                <div className="text-left">
+                  <p className="font-bold text-sm text-orange-800">企業アプローチが届いています</p>
+                  <p className="text-[11px] text-orange-600">{approachCount}件の未対応アプローチ</p>
+                </div>
+              </div>
+              <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{approachCount}</span>
+            </button>
+          )}
+
+          {/* 空きのある企業一覧 */}
+          {availableBusinesses.length > 0 && (
+            <div>
+              <h2 className="font-bold text-sm text-gray-500 mb-3">🏢 空きのある企業</h2>
+              <div className="space-y-2">
+                {availableBusinesses.slice(0, 5).map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => router.push(`/b/company/${item.user_id}`)}
+                    className="w-full bg-white rounded-2xl shadow-sm p-4 text-left active:bg-gray-50 transition-colors border border-gray-100"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-lg flex-shrink-0">
+                        🏢
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-gray-800">
+                          {item.business_profile?.company_name || '企業'}
+                        </p>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {item.business_profile?.description && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                              {item.business_profile.description}
+                            </span>
+                          )}
+                          {item.business_profile?.area && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                              📍 {item.business_profile.area}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-green-600 font-bold mt-1">
+                          📅 {new Date(item.date_from + 'T00:00:00').toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
+                          〜{new Date(item.date_to + 'T00:00:00').toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })} 空き
+                        </p>
+                        {item.note && (
+                          <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-1">💬 {item.note}</p>
+                        )}
+                      </div>
+                      <span className="text-gray-300 text-lg">›</span>
+                    </div>
+                  </button>
+                ))}
+                {availableBusinesses.length > 5 && (
+                  <p className="text-center text-xs text-orange-500 font-bold py-2">
+                    他 {availableBusinesses.length - 5} 件の空きあり企業
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* オファー一覧 */}
           <div>
