@@ -51,28 +51,19 @@ export async function GET(req: NextRequest) {
       return response
     }
 
-    // 企業ユーザーのみフィルタ（roleがbusiness）
-    const { data: users } = await supabase
-      .from('users')
-      .select('id, role')
-      .in('id', userIds)
+    // business_profilesが存在するユーザー＝企業として扱う
+    const { data: profiles } = await supabase
+      .from('business_profiles')
+      .select('*')
+      .in('user_id', userIds)
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const businessUserIds = ((users || []) as any[])
-      .filter((u) => u.role === 'business')
-      .map((u) => u.id as string)
+    const businessUserIds = ((profiles || []) as any[]).map((p) => p.user_id as string)
 
     if (businessOnly === 'true' && businessUserIds.length === 0) {
       const response = NextResponse.json([])
       response.headers.set('Cache-Control', 'private, no-cache, no-store')
       return response
     }
-
-    // 企業プロフィールを取得
-    const { data: profiles } = await supabase
-      .from('business_profiles')
-      .select('*')
-      .in('user_id', businessUserIds.length > 0 ? businessUserIds : ['__none__'])
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const profileMap: Record<string, any> = {}
