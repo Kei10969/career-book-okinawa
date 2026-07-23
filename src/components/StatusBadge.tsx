@@ -10,7 +10,8 @@ const statusConfig: Record<string, { label: string; style: string }> = {
   open: { label: '募集中', style: 'bg-blue-100 text-blue-700' },
   reviewing: { label: '審査中', style: 'bg-yellow-100 text-yellow-700' },
   matched: { label: '成立', style: 'bg-green-100 text-green-700' },
-  closed: { label: '終了', style: 'bg-gray-100 text-gray-500' },
+  closed: { label: '受付終了', style: 'bg-gray-100 text-gray-500' },
+  expired: { label: '期間終了', style: 'bg-orange-100 text-orange-600' },
   cancelled: { label: 'キャンセル', style: 'bg-gray-200 text-gray-600' },
 }
 

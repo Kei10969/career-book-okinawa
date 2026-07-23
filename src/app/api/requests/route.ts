@@ -34,6 +34,14 @@ export async function GET(req: NextRequest) {
   if (trade && trade !== 'all') query = query.eq('trade', trade)
   if (userId) query = query.eq('user_id', userId)
 
+  // user_id指定（マイページ）以外は、period_endから30日以上経過した案件を除外
+  if (!userId) {
+    const cutoffDate = new Date()
+    cutoffDate.setDate(cutoffDate.getDate() - 30)
+    const cutoffStr = cutoffDate.toISOString().split('T')[0]
+    query = query.gte('period_end', cutoffStr)
+  }
+
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

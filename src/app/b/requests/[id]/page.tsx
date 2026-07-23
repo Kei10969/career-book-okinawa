@@ -7,6 +7,7 @@ import StatusBadge from '@/components/StatusBadge'
 import PrimaryButton from '@/components/PrimaryButton'
 import type { Request, Application } from '@/types/database'
 import { getCurrentUserId } from '@/lib/auth'
+import { isExpired } from '@/lib/request-utils'
 
 interface CancellationInfo {
   id: string
@@ -255,14 +256,24 @@ export default function BusinessRequestDetailPage({ params }: { params: Promise<
       <div className="space-y-4">
         {/* 募集情報 */}
         <div className="bg-white rounded-2xl shadow-sm p-4">
-          <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
             <RoleBadge type={request.type} />
             {request.status === 'closed' && (
               <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">
-                ✅ 成立済み
+                🤝 マッチ成立
               </span>
             )}
-            {request.status !== 'closed' && request.is_urgent && (
+            {request.status === 'closed' && (
+              <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                受付終了
+              </span>
+            )}
+            {isExpired(request) && (
+              <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                📅 募集期間終了
+              </span>
+            )}
+            {request.status !== 'closed' && !isExpired(request) && request.is_urgent && (
               <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">
                 🔥 急募
               </span>
@@ -478,7 +489,13 @@ export default function BusinessRequestDetailPage({ params }: { params: Promise<
 
         {/* 他社の投稿の場合: 応募フォーム */}
         {!isOwner && (
-          applied ? (
+          (request.status === 'closed' || isExpired(request)) && !applied ? (
+            <div className="bg-gray-50 rounded-2xl p-4 text-center">
+              <span className="text-gray-500 font-bold">
+                {request.status === 'closed' ? '受付終了のため応募できません' : '募集期間が終了しています'}
+              </span>
+            </div>
+          ) : applied ? (
             <div className="bg-green-50 rounded-2xl p-4 text-center">
               <span className="text-green-600 font-bold">✅ 応募済み</span>
             </div>

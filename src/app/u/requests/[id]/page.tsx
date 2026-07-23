@@ -6,6 +6,7 @@ import RoleBadge from '@/components/RoleBadge'
 import PrimaryButton from '@/components/PrimaryButton'
 import type { Request } from '@/types/database'
 import { getCurrentUserId } from '@/lib/auth'
+import { isExpired } from '@/lib/request-utils'
 
 export default function UserRequestDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -151,19 +152,45 @@ export default function UserRequestDetailPage({ params }: { params: Promise<{ id
     >
       <div className="space-y-4">
         {/* バッジ */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <RoleBadge type={request.type} />
           {request.status === 'closed' && (
             <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">
-              ✅ 成立済み
+              🤝 マッチ成立
             </span>
           )}
-          {request.status !== 'closed' && request.is_urgent && (
+          {request.status === 'closed' && (
+            <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs font-bold">
+              受付終了
+            </span>
+          )}
+          {isExpired(request) && (
+            <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full text-xs font-bold">
+              📅 募集期間終了
+            </span>
+          )}
+          {request.status !== 'closed' && !isExpired(request) && request.is_urgent && (
             <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">
               🔥 急募
             </span>
           )}
         </div>
+
+        {/* マッチ成立バナー */}
+        {request.status === 'closed' && (
+          <div className="bg-green-50 border border-green-200 rounded-2xl p-4 text-center">
+            <span className="text-2xl">🤝</span>
+            <p className="font-bold text-green-700 mt-1">この募集はマッチが成立し、受付終了しました</p>
+          </div>
+        )}
+
+        {/* 期間終了バナー */}
+        {isExpired(request) && (
+          <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 text-center">
+            <span className="text-2xl">📅</span>
+            <p className="font-bold text-orange-600 mt-1">この募集は応募期間が終了しました</p>
+          </div>
+        )}
 
         {/* タイトル */}
         <h1 className="text-xl font-black text-gray-900">{request.title}</h1>
@@ -210,7 +237,13 @@ export default function UserRequestDetailPage({ params }: { params: Promise<{ id
         </div>
 
         {/* 応募フォーム / ステータス表示 */}
-        {applied ? (
+        {(request.status === 'closed' || isExpired(request)) && !applied ? (
+          <div className="bg-gray-50 rounded-2xl p-4 text-center">
+            <span className="text-gray-500 font-bold">
+              {request.status === 'closed' ? '受付終了のため応募できません' : '募集期間が終了しています'}
+            </span>
+          </div>
+        ) : applied ? (
           <div className="space-y-2">
             {myApplication?.status === 'cancelled' ? (
               <div className="bg-gray-50 rounded-2xl p-4 text-center">

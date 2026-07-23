@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import type { Request } from '@/types/database'
 import RoleBadge from './RoleBadge'
+import { isExpired } from '@/lib/request-utils'
 
 interface RequestCardProps {
   request: Request & { user?: { display_name?: string | null; company_name?: string | null } }
@@ -9,19 +10,31 @@ interface RequestCardProps {
 
 export default function RequestCard({ request, linkPrefix }: RequestCardProps) {
   const isClosed = request.status === 'closed'
+  const expired = isExpired(request)
+  const isInactive = isClosed || expired
   const companyName = request.user?.company_name || request.user?.display_name
 
   return (
     <Link href={`${linkPrefix}/requests/${request.id}`}>
-      <div className={`bg-white rounded-2xl shadow-sm p-4 mb-3 active:scale-[0.98] transition-transform ${isClosed ? 'opacity-75' : ''}`}>
-        <div className="flex items-center gap-2 mb-2">
+      <div className={`bg-white rounded-2xl shadow-sm p-4 mb-3 active:scale-[0.98] transition-transform ${isInactive ? 'opacity-70' : ''}`}>
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
           <RoleBadge type={request.type} />
           {isClosed && (
             <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">
-              ✅ 成立済み
+              🤝 マッチ成立
             </span>
           )}
-          {!isClosed && request.is_urgent && (
+          {isClosed && (
+            <span className="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs font-bold">
+              受付終了
+            </span>
+          )}
+          {expired && (
+            <span className="bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full text-xs font-bold">
+              📅 募集期間終了
+            </span>
+          )}
+          {!isInactive && request.is_urgent && (
             <span className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs font-bold">
               🔥 急募
             </span>
