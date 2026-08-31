@@ -6,19 +6,6 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-// role値の変換: フロント → DB
-// DB側がまだ type カラム（individual/company）の場合に対応
-function roleToType(role: string): string {
-  if (role === 'business') return 'company'
-  return 'individual'
-}
-
-// type値の変換: DB → フロント
-function typeToRole(type: string): string {
-  if (type === 'company') return 'business'
-  return 'user'
-}
-
 // LINEログイン後にユーザーを取得または作成
 export async function POST(req: NextRequest) {
   const { line_id, display_name, avatar_url, role } = await req.json()
@@ -28,7 +15,6 @@ export async function POST(req: NextRequest) {
   }
 
   const userRole = role === 'business' ? 'business' : 'user'
-  const dbType = roleToType(userRole)
 
   // 既存ユーザー検索
   const { data: existing } = await supabase
@@ -41,21 +27,19 @@ export async function POST(req: NextRequest) {
     // アバター更新のみ（display_nameはユーザーが編集した可能性があるので上書きしない）
     const updates: Record<string, string> = {}
     if (avatar_url && existing.avatar_url !== avatar_url) updates.avatar_url = avatar_url
-    // type が違えば更新
-    if (existing.type && dbType !== existing.type) updates.type = dbType
+    // role が違えば更新
+    if (existing.role && userRole !== existing.role) updates.role = userRole
 
     if (Object.keys(updates).length > 0) {
       await supabase.from('users').update(updates).eq('id', existing.id)
     }
 
-    // フロント向けに role を付与して返す
-    // display_name はDB側（ユーザー編集済み）を優先
     return NextResponse.json({
       ...existing,
       ...updates,
-      role: typeToRole(updates.type || existing.type || 'individual'),
+      role: updates.role || existing.role || 'user',
       nickname: existing.display_name,
-      line_display_name: display_name, // LINE側の元の名前も返す（参考用）
+      line_display_name: display_name,
       profile_completed: existing.profile_completed ?? false,
     })
   }
@@ -67,7 +51,7 @@ export async function POST(req: NextRequest) {
       line_id,
       display_name,
       avatar_url,
-      type: dbType,
+      role: userRole,
     })
     .select()
     .single()

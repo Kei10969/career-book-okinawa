@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import { initLiff, liff, isLiffLoggedIn, isInLiffClient } from '@/lib/liff'
 import type { UserRole } from '@/types/database'
 
+const isTestMode = process.env.NEXT_PUBLIC_TEST_MODE === 'true'
+
 export default function LoginPage() {
   const router = useRouter()
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null)
@@ -62,18 +64,20 @@ export default function LoginPage() {
         return
       }
 
-      // 3. LIFF初期化
-      const ok = await initLiff()
-      setLiffReady(ok)
+      // 3. LIFF初期化（テストモードではスキップ）
+      if (!isTestMode) {
+        const ok = await initLiff()
+        setLiffReady(ok)
 
-      if (ok && isLiffLoggedIn()) {
-        // LIFF内ブラウザでログイン済み
-        const savedRole = localStorage.getItem('selected_role') as UserRole | null
-        if (savedRole) {
-          await registerUser(savedRole)
-          return
+        if (ok && isLiffLoggedIn()) {
+          // LIFF内ブラウザでログイン済み
+          const savedRole = localStorage.getItem('selected_role') as UserRole | null
+          if (savedRole) {
+            await registerUser(savedRole)
+            return
+          }
+          setAlreadyLoggedIn(true)
         }
-        setAlreadyLoggedIn(true)
       }
     } catch (e: unknown) {
       console.error('Auth check:', e)
@@ -173,9 +177,29 @@ export default function LoginPage() {
       })
   }
 
+  async function handleTestLogin() {
+    if (!selectedRole) return
+    setIsLoading(true)
+    setError('')
+
+    const testProfile = {
+      userId: `test-${selectedRole}-${Date.now()}`,
+      displayName: selectedRole === 'business' ? 'テスト企業' : 'テスト職人',
+      pictureUrl: null,
+    }
+
+    await registerUserWithProfile(testProfile, selectedRole)
+  }
+
   async function handleLogin() {
     if (!selectedRole) return
     setError('')
+
+    // テストモード: LINEログインをスキップ
+    if (isTestMode) {
+      await handleTestLogin()
+      return
+    }
 
     localStorage.setItem('selected_role', selectedRole)
 
@@ -283,12 +307,20 @@ export default function LoginPage() {
           </button>
         </div>
 
+        {isTestMode && (
+          <div className="w-full max-w-sm bg-yellow-500/20 border border-yellow-400/40 rounded-2xl p-3 mb-4">
+            <p className="text-yellow-200 text-xs text-center font-bold">🧪 テスト環境 — LINEログイン不要</p>
+          </div>
+        )}
+
         <button onClick={handleLogin} disabled={!selectedRole || isLoading}
-          className={`w-full max-w-sm ${alreadyLoggedIn ? 'bg-blue-600' : 'bg-[#06C755]'} text-white font-black text-lg py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl transition-all ${
+          className={`w-full max-w-sm ${isTestMode ? 'bg-blue-600' : alreadyLoggedIn ? 'bg-blue-600' : 'bg-[#06C755]'} text-white font-black text-lg py-4 rounded-2xl flex items-center justify-center gap-3 shadow-xl transition-all ${
             !selectedRole ? 'opacity-40 cursor-not-allowed' : 'active:scale-[0.98]'
           }`}>
           {isLoading ? (
             <div className="animate-spin w-6 h-6 border-3 border-white border-t-transparent rounded-full" />
+          ) : isTestMode ? (
+            '🧪 テストログイン'
           ) : alreadyLoggedIn ? (
             '始める'
           ) : (
@@ -301,7 +333,7 @@ export default function LoginPage() {
           )}
         </button>
 
-        {!alreadyLoggedIn && (
+        {!isTestMode && !alreadyLoggedIn && (
           <p className="text-white/50 text-xs text-center mt-3">LINEアカウントで簡単ログイン</p>
         )}
 
